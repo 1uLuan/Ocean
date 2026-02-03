@@ -1,0 +1,7 @@
+:root,
+.theme-light .card {
+  background-color: var(--bg-main);
+}
+.theme-dark .card {
+  background-color: var(--bg-main);
+}
