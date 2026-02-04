@@ -26,14 +26,12 @@ export function MainContent() {
   );
   const resetInterval = useFileStore((state) => state.resetInterval);
   const intervalSelection = useFileStore((state) => state.intervalSelection);
+  const setHome = useNavigationStore((state) => state.setHome);
+  const setWorkspacePath = useNavigationStore(
+    (state) => state.setWorkspacePath,
+  );
 
   const listRef = useRef<HTMLUListElement>(null);
-
-  // Scroll rápido e responsivo
-  useSmoothScroll(listRef as React.RefObject<HTMLElement>, {
-    speed: 1.5, // Um pouco mais rápido
-    smoothness: 0.3, // Responsivo mas suave
-  });
 
   useEffect(() => {
     setIsLoading(true);
@@ -52,13 +50,27 @@ export function MainContent() {
   }, [workspaces, reload]);
 
   useEffect(() => {
-    const setHome = useNavigationStore.getState().setHome;
-
     invoke<string>('get_home').then((homePath) => {
       setHome(homePath);
-      goPath(homePath);
+      setWorkspacePath(0);
+      setWorkspacePath(1);
+      setWorkspacePath(2);
+      setWorkspacePath(3);
     });
-  }, [workspaces[actualWorkspace] === '']);
+  }, []);
+
+  // Scroll rápido e responsivo
+  useSmoothScroll(listRef as React.RefObject<HTMLElement>, {
+    speed: 1.2, // Um pouco mais rápido
+    smoothness: 0.4, // Responsivo mas suave
+  });
+
+  useEffect(() => {
+    console.log('=== MainContent State ===');
+    console.log('Workspace:', actualWorkspace);
+    console.log('Path:', workspaces[actualWorkspace]);
+    console.log('Element existe?', !!listRef.current);
+  }, [actualWorkspace, workspaces[actualWorkspace]]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0">

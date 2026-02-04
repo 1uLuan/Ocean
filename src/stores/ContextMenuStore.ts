@@ -131,7 +131,8 @@ export const useContextMenuStore = create<MenuStore>((set, get) => ({
     setCopySelected([]);
   },
   moveDir: async () => {
-    const path = useNavigationStore.getState().path;
+    const actualWorkspace = useNavigationStore.getState().actualWorkspace;
+    const workspaces = useNavigationStore.getState().workspaces;
     const reload = useFileStore.getState().reload;
     const setReload = useFileStore.getState().setReload;
     const copySelected = useFileStore.getState().copySelected;
@@ -141,7 +142,7 @@ export const useContextMenuStore = create<MenuStore>((set, get) => ({
       document.body.style.cursor = 'wait';
       await invoke('move_items_to', {
         dirPaths: copySelected,
-        targetPath: path,
+        targetPath: workspaces[actualWorkspace],
       });
     } catch (error) {
       console.log(error);

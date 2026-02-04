@@ -13,6 +13,7 @@ type NavigationStore = {
   actualWorkspace: 0 | 1 | 2 | 3;
   setActualWorkspace: (ws: 0 | 1 | 2 | 3) => void;
   workspaces: Record<0 | 1 | 2 | 3, string>;
+  setWorkspacePath: (ws: 0 | 1 | 2 | 3) => void;
 
   //==========funções===========
   goPath: (path: string) => void;
@@ -43,6 +44,10 @@ export const useNavigationStore = create<NavigationStore>((set, get) => ({
       actualWorkspace: ws,
       path: workspaces[ws] || get().home,
     });
+  },
+  setWorkspacePath: (ws: 0 | 1 | 2 | 3) => {
+    const { workspaces } = get();
+    set({ workspaces: { ...workspaces, [ws]: get().home } });
   },
 
   goPath: (path: string) => {

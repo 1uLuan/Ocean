@@ -11,6 +11,8 @@ use std::time::Instant;
 use tauri_plugin_shell::ShellExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio;
+use sysinfo;
+use std::io::ErrorKind;
 
 static CANCEL_FUNC: AtomicBool = AtomicBool::new(false);
 
@@ -360,28 +362,52 @@ async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: Stri
 }
 
 #[tauri::command]
-async fn move_items_to(_app: AppHandle, dir_paths: Vec<String>, target_path: String) -> Result<(), String> {
-    let target_dir = Path::new(&target_path);
-    if !target_dir.exists() {
-        create_dir_all(target_dir)
-            .map_err(|e| format!("Erro ao criar destino {}: {}", target_path, e))?;
-    }   
-    let mut options = CopyOptions::new();
-    options.overwrite = true;
-    options.skip_exist = false;
-    
-    let _result = tokio::task::spawn_blocking(move || {
-        fs_extra::move_items(
-            &dir_paths, 
-            &target_path, 
-            &options, 
-        )
-    })
-    .await
-    .map_err(|e| format!("Erro no spawn: {}", e))?
-    .map_err(|e| format!("Erro ao mover itens: {}", e))?;
-    
+async fn move_items_to(_app: tauri::AppHandle, dir_paths: Vec<String>, target_path: String) -> Result<(), String> {
+    for path_str in dir_paths {
+        let src_path = Path::new(&path_str);
+        
+        // Extrai apenas o nome do arquivo/pasta (ex: "foto.jpg")
+        let file_name = src_path.file_name()
+            .ok_or_else(|| format!("Caminho inválido: {}", path_str))?;
+        
+        // Constrói o caminho de destino corretamente usando PathBuf
+        let mut dest_path = PathBuf::from(&target_path);
+        dest_path.push(file_name);
 
+        // 1. Tenta o Rename (Operação Atômica e Rápida)
+        match rename(&src_path, &dest_path) {
+            Ok(_) => println!("Movido via metadados: {:?}", file_name),
+            
+            // 2. Fallback para Cross-Device (Discos diferentes)
+            Err(e) if e.kind() == ErrorKind::CrossesDevices || e.raw_os_error() == Some(18) => {
+                let target_dir = Path::new(&target_path);
+                if !target_dir.exists() {
+                    create_dir_all(target_dir)
+                        .map_err(|e| format!("Erro ao criar diretório: {}", e))?;
+                }
+
+                let options = CopyOptions {
+                    overwrite: true,
+                    skip_exist: false,
+                    ..Default::default()
+                };
+
+                let src_path_clone = src_path.to_path_buf();
+                let target_path_clone = PathBuf::from(&target_path);
+
+                // Rodar a cópia pesada em uma thread separada para não travar o app
+                tokio::task::spawn_blocking(move || {
+                    // fs_extra::move_items aceita uma lista de itens
+                    fs_extra::move_items(&[src_path_clone], &target_path_clone, &options)
+                })
+                .await
+                .map_err(|e| format!("Erro de concorrência: {}", e))?
+                .map_err(|e| format!("Erro ao mover fisicamente: {}", e))?;
+            }
+            
+            Err(e) => return Err(format!("Erro ao mover {:?}: {}", file_name, e)),
+        }
+    }
     Ok(())
 }
 
