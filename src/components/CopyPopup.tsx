@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { useCopyPopupStore } from '@/stores/CopyPopup';
 import { TypeCopyProgress } from '@/stores/CopyPopup';
 import { XIcon } from '@phosphor-icons/react';
 
-export function CopyPopup() {
+export function CopyPopup({  initialX = window.innerWidth / 2 - 200,
+  initialY = window.innerHeight / 2 - 150}) {
   const copyProgress = useCopyPopupStore((state) => state.copyProgress);
   const progress = useCopyPopupStore((state) => state.progress);
   const fileOnCopy = useCopyPopupStore((state) => state.fileOnCopy);
@@ -26,10 +27,68 @@ export function CopyPopup() {
     };
   }, []);
 
+  const [position, setPosition] = useState({ x: initialX, y: initialY });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const popupRef = useRef<HTMLDivElement>(null);
+
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
+
+      // Limites da tela
+      const maxX = window.innerWidth - (popupRef.current?.offsetWidth || 0);
+      const maxY = window.innerHeight - (popupRef.current?.offsetHeight || 0);
+
+      setPosition({
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY))
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, dragOffset]);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!popupRef.current) return;
+
+    const rect = popupRef.current.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+    setIsDragging(true);
+  };
+
   return (
     <>
       {copyProgress && (
-        <div className="h-40 w-75 absolute top-[25%] left-[40%] rounded-[8px] p-[4px] z-[1000] bg-[var(--bg-tertiary)] border border-[var(--border-secondary)]">
+        <div 
+          ref={popupRef}
+          className="h-40 w-75 absolute rounded-[8px] p-[4px] z-[1000] bg-[var(--bg-tertiary)] border border-[var(--border-secondary)]"
+          onMouseDown={handleMouseDown}
+          style={{
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            cursor: isDragging ? 'grabbing' : 'default'
+        }}
+        >
           <div className="flex items-start justify-between">
             <div className="text-[12px] w-auto bg-[var(--bg-secondary)] rounded-[4px] pr-2 pl-2 border border-[var(--border-secondary)]">
               {fileOnCopy}

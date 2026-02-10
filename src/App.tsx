@@ -64,7 +64,7 @@ function FileExplorer() {
         <BottomBar />
         <ContextMenu />
         <NamePopup />
-        <CopyPopup />
+        <CopyPopup initialX={300} initialY={200} />
       </IconContext.Provider>
     </main>
   );
