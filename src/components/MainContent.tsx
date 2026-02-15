@@ -5,6 +5,7 @@ import { useFileStore, Fileinfo } from '@/stores/FileStore.ts';
 import { useNavigationStore } from '@/stores/NavigationStore.ts';
 import { useContextMenuStore } from '@/stores/ContextMenuStore.ts';
 import { useSmoothScroll } from '@/hooks/useSmoothScroll.ts';
+import { image } from '@tauri-apps/api';
 
 export function MainContent() {
   const [files, setFiles] = useState<Fileinfo[]>([]);
@@ -71,6 +72,17 @@ export function MainContent() {
     console.log('Path:', workspaces[actualWorkspace]);
     console.log('Element existe?', !!listRef.current);
   }, [actualWorkspace, workspaces[actualWorkspace]]);
+
+  /*async function loadThumb(path: string) {
+    try {
+      const dataUrl = await invoke('get_thumbnail', {
+        path: path,
+        maxSize: 200,
+      });
+    } catch (error) {
+      console.error('Erro ao carregar thumbnail:', error);
+    }
+  }*/
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0">

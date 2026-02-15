@@ -11,8 +11,10 @@ use std::time::Instant;
 use tauri_plugin_shell::ShellExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio;
-use sysinfo;
 use std::io::ErrorKind;
+use image::imageops::FilterType;
+use image::ImageReader;
+use base64::{Engine as _, engine::general_purpose};
 
 static CANCEL_FUNC: AtomicBool = AtomicBool::new(false);
 
@@ -423,6 +425,36 @@ async fn move_to_trash(dir_path: Vec<String>) {
     };
 }
 #[tauri::command]
+async fn delete(dir_path: Vec<String>) -> Result<(), String> {
+    use tokio::fs;
+
+    for path in dir_path {
+        let metadata = fs::metadata(&path).await.map_err(|e| format!("failed to read metadata from {}. Err: {}",path, e))?;
+        if metadata.is_dir() {
+            fs::remove_dir_all(&path).await
+        }
+        else {
+            fs::remove_file(&path).await
+        }
+        .map_err(|e| format!("failed to delete {}. Err: {}",path, e))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn get_path_name(paths: Vec<String>) -> Vec<String> {
+    paths
+        .iter()
+        .filter_map(|path| {
+            Path::new(path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string())
+        })
+        .collect()
+}
+
+#[tauri::command]
 fn rename_dir(dir_paths: Vec<String>, new_name: &str) -> Result<(), String> {
     for dir_path in &dir_paths {
         rename(dir_path, new_name).map_err(|e| format!("Erro ao renomear {} : {}", dir_path, e))?;
@@ -442,6 +474,26 @@ async fn open_terminal(app: tauri::AppHandle, path: String) -> Result<(), String
     }
     Ok(())
 }
+
+#[tauri::command]
+fn get_thumbnail(path: String, max_size: u32) -> Result<String, String> {
+    let img = ImageReader::open(&path)
+        .map_err(|e| e.to_string())?
+        .decode()
+        .map_err(|e| e.to_string())?;
+    
+    // Redimensionar mantendo proporção
+    let thumbnail = img.resize(max_size, max_size, FilterType::Lanczos3);
+    
+    // Converter para bytes
+    let mut bytes: Vec<u8> = Vec::new();
+    thumbnail.write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
+        .map_err(|e| e.to_string())?;
+    
+    let base64_string = general_purpose::STANDARD.encode(&bytes);
+    Ok(format!("data:image/jpeg;base64,{}", base64_string))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
@@ -457,11 +509,14 @@ pub fn run() {
             cancel_func,
             rename_dir,
             move_to_trash,
+            delete,
             get_home,
             load_config,
             save_config,
             open_terminal,
             move_items_to,
+            get_path_name,
+            get_thumbnail
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,5 +1,6 @@
 import { ReactElement } from 'react';
 import { useNavigationStore } from '@/stores/NavigationStore';
+import { useFileStore } from '@/stores/FileStore';
 import {
   ArrowFatDownIcon,
   ComputerTowerIcon,
@@ -10,10 +11,11 @@ import {
 export function SideBar() {
   const home = useNavigationStore((state) => state.home);
   const goPath = useNavigationStore((state) => state.goPath);
+  const resetSelected = useFileStore((state) => state.resetSelected);
   const local_icons: Record<string, [ReactElement, string]> = {
     Home: [<HouseLineIcon />, home + ''],
     Download: [<ArrowFatDownIcon />, home + '/Downloads'],
-    Trash: [<TrashSimpleIcon />, home + '/.local/share/Trash/files/'],
+    Trash: [<TrashSimpleIcon />, home + '/.local/share/Trash/files'],
     Root: [<ComputerTowerIcon />, '/'],
   };
 
@@ -25,7 +27,10 @@ export function SideBar() {
             <button
               type="button"
               className="h-[30px] w-full rounded-md hover:bg-[var(--bg-hover-primary)]"
-              onClick={() => goPath(path)}
+              onClick={() => {
+                goPath(path);
+                resetSelected();
+              }}
             >
               <div className="flex items-center pl-1.5 gap-1.5 h-full text-[14px]">
                 {icon}

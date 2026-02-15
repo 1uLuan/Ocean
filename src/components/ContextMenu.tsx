@@ -4,6 +4,7 @@ import { useContextMenuStore } from '../stores/ContextMenuStore.ts';
 import { useConfigStore } from '../stores/ConfigStore.ts';
 import { useFileStore } from '../stores/FileStore.ts';
 import { useNavigationStore } from '@/stores/NavigationStore.ts';
+import { usePopupControl } from '@/stores/PopupControl.ts';
 import {
   CopyIcon,
   CaretRightIcon,
@@ -15,7 +16,6 @@ import {
   FolderSimpleIcon,
   EyeSlashIcon,
   ScissorsIcon,
-  CardsIcon,
   FileIcon,
 } from '@phosphor-icons/react';
 
@@ -39,6 +39,8 @@ export function ContextMenu() {
   const setReload = useFileStore((state) => state.setReload);
   const setCopySelected = useFileStore((state) => state.setCopySelected);
   const copySelected = useFileStore((state) => state.copySelected);
+  const setCutSelected = useFileStore((state) => state.setCutSelected);
+  const cutSelected = useFileStore((state) => state.cutSelected);
   const openPopup = useContextMenuStore((state) => state.openPopup);
   const setOnEnter = useContextMenuStore((state) => state.setOnEnter);
   const toggleHiddenFiles = useConfigStore((state) => state.toggleHiddenFiles);
@@ -49,17 +51,21 @@ export function ContextMenu() {
   const makeFile = useContextMenuStore((state) => state.makeFile);
   const handleRename = useContextMenuStore((state) => state.handleRename);
   const path = useNavigationStore((state) => state.path);
+  const workspaces = useNavigationStore((state) => state.workspaces);
+  const actualWorkspace = useNavigationStore((state) => state.actualWorkspace);
+  const home = useNavigationStore((state) => state.home);
+  const setWarningPopup = usePopupControl((state) => state.setWarningPopup);
 
   const btnList: MenuActions[] = [
     {
-      label: 'Novo',
+      label: 'Make New',
       icon: <CaretRightIcon weight="light" />,
       onClick: undefined,
       onMouseEnter: () => setShowDirMenu(true),
       disabled: false,
     },
     {
-      label: 'Renomear',
+      label: 'Rename',
       icon: <PenNibIcon weight="light" />,
       onClick: () => {
         setOnEnter(handleRename);
@@ -69,7 +75,7 @@ export function ContextMenu() {
       disabled: false,
     },
     {
-      label: 'Copiar',
+      label: 'Copy',
       icon: <CopyIcon weight="light" />,
       onClick: () => {
         setCopySelected(selectedFiles);
@@ -78,45 +84,51 @@ export function ContextMenu() {
       disabled: false,
     },
     {
-      label: 'Colar',
-      icon: <ClipboardIcon weight="light" />,
-      onClick: () => {
-        pasteDir();
-      },
-      onMouseEnter: () => setShowDirMenu(false),
-      disabled: copySelected.length === 0,
-    },
-    {
-      label: 'Recortar',
+      label: 'Cut',
       icon: <ScissorsIcon weight="light" />,
       onClick: () => {
-        setCopySelected(selectedFiles);
+        setCutSelected(selectedFiles);
       },
       onMouseEnter: () => setShowDirMenu(false),
       disabled: false,
     },
     {
-      label: 'Colar Recorte',
-      icon: <CardsIcon weight="light" />,
+      label: 'Paste',
+      icon: <ClipboardIcon weight="light" />,
       onClick: async () => {
-        moveDir();
+        if (cutSelected.length > 0) {
+          moveDir();
+        } else {
+          pasteDir();
+        }
       },
       onMouseEnter: () => setShowDirMenu(false),
-      disabled: false,
+      disabled: copySelected.length === 0 && cutSelected.length === 0,
     },
     {
-      label: 'Excluir',
+      label:
+        workspaces[actualWorkspace] === home + '/.local/share/Trash/files'
+          ? 'Delete'
+          : 'Move To Trash',
       icon: <TrashIcon weight="light" />,
       onClick: () => {
-        moveToTrash();
+        if (
+          workspaces[actualWorkspace] ===
+          home + '/.local/share/Trash/files'
+        ) {
+          setWarningPopup(true);
+          //del() in warningPopup
+        } else {
+          moveToTrash();
+        }
       },
       onMouseEnter: () => setShowDirMenu(false),
       disabled: false,
     },
     {
       label: config.toggle_hidden_files
-        ? 'Ocultar Arquivos Ocultos'
-        : 'Exibir Arquivos Ocultos',
+        ? 'Hide Hidden Files'
+        : 'Show Hidden Files',
       icon: config.toggle_hidden_files ? (
         <EyeSlashIcon weight="light" />
       ) : (
@@ -130,7 +142,7 @@ export function ContextMenu() {
       disabled: false,
     },
     {
-      label: 'Abrir Terminal',
+      label: 'Open Terminal',
       icon: <TerminalWindowIcon weight="light" />,
       onClick: async () => {
         try {
@@ -196,7 +208,7 @@ export function ContextMenu() {
           >
             {btnList.map((item) => (
               <div key={item.label}>
-                {item.label === 'Excluir' && (
+                {['Move To Trash', 'Delete'].includes(item.label) && (
                   <>
                     <div className="h-[1px] w-[100%] bg-[var(--text-muted)]" />
                     <div className="h-1 " />
@@ -216,7 +228,7 @@ export function ContextMenu() {
                     {item.icon} {item.label}
                   </div>
                 </button>
-                {item.label === 'Excluir' && (
+                {['Move To Trash', 'Delete'].includes(item.label) && (
                   <>
                     <div className="h-1" />
                     <div className="h-[1px] w-[100%] bg-[var(--text-muted)]" />
@@ -243,7 +255,7 @@ export function ContextMenu() {
                   }}
                 >
                   <div className="flex flex-row items-center pl-2.5 gap-1">
-                    <FolderSimpleIcon /> Pasta
+                    <FolderSimpleIcon /> Folder
                   </div>
                 </div>
                 <div

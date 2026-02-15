@@ -29,6 +29,7 @@ type MenuStore = {
   closePopup: () => void;
   pasteDir: () => void;
   moveToTrash: () => void;
+  delete: () => void;
   moveDir: () => void;
 };
 export const useContextMenuStore = create<MenuStore>((set, get) => ({
@@ -135,13 +136,13 @@ export const useContextMenuStore = create<MenuStore>((set, get) => ({
     const workspaces = useNavigationStore.getState().workspaces;
     const reload = useFileStore.getState().reload;
     const setReload = useFileStore.getState().setReload;
-    const copySelected = useFileStore.getState().copySelected;
+    const cutSelected = useFileStore.getState().cutSelected;
     const setCopySelected = useFileStore.getState().setCopySelected;
     const resetSelected = useFileStore.getState().resetSelected;
     try {
       document.body.style.cursor = 'wait';
       await invoke('move_items_to', {
-        dirPaths: copySelected,
+        dirPaths: cutSelected,
         targetPath: workspaces[actualWorkspace],
       });
     } catch (error) {
@@ -161,10 +162,23 @@ export const useContextMenuStore = create<MenuStore>((set, get) => ({
     const selectedFiles = useFileStore.getState().selectedFiles;
     try {
       await invoke('move_to_trash', { dirPath: selectedFiles });
-      setReload(!reload);
       resetSelected();
+      setReload(!reload);
     } catch (err) {
       console.error(err);
+    }
+  },
+  delete: async () => {
+    const reload = useFileStore.getState().reload;
+    const setReload = useFileStore.getState().setReload;
+    const resetSelected = useFileStore.getState().resetSelected;
+    const selectedFiles = useFileStore.getState().selectedFiles;
+    try {
+      await invoke('delete', { dirPath: selectedFiles });
+      resetSelected();
+      setReload(!reload);
+    } catch (err) {
+      console.log(err);
     }
   },
 }));

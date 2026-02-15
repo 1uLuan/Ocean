@@ -12,6 +12,7 @@ import { CopyPopup } from '@/components/CopyPopup.tsx';
 import { TitleBar } from '@/components/TitleBar';
 import { ConfigScreen } from '@/components/ConfigScreen';
 import { BottomBar } from '@/components/BottomBar';
+import { WarningPopup } from '@/components/WarningPopup';
 
 //stores
 import { useNavigationStore } from '@/stores/NavigationStore.ts';
@@ -65,6 +66,7 @@ function FileExplorer() {
         <ContextMenu />
         <NamePopup />
         <CopyPopup initialX={300} initialY={200} />
+        <WarningPopup />
       </IconContext.Provider>
     </main>
   );

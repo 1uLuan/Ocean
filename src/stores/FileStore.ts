@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { invoke } from '@tauri-apps/api/core';
 
 export type Fileinfo = {
   name: string;
@@ -12,6 +13,8 @@ type FileStore = {
   files: Fileinfo[];
   selectedFiles: string[];
   copySelected: string[];
+  cutSelected: string[];
+  pathName: string[];
   intervalSelected: number[];
   isLoading: boolean;
   reload: boolean;
@@ -20,6 +23,8 @@ type FileStore = {
   toggleSelected: (selectedFiles: string) => void;
   setSelected: (selectedFiles: string[]) => void;
   setCopySelected: (copySelected: string[]) => void;
+  setCutSelected: (cutSelected: string[]) => void;
+  setPathName: (pathName: string[]) => void;
   setIntervalSelected: (intervalSelected: number[]) => void;
   resetInterval: () => void;
   resetSelected: () => void;
@@ -27,12 +32,15 @@ type FileStore = {
   setReload: (reload: boolean) => void;
   isSelected: (value: string) => boolean;
   intervalSelection: (files: Fileinfo[]) => void;
+  getPathName: () => void;
 };
 
 export const useFileStore = create<FileStore>((set, get) => ({
   files: [],
   selectedFiles: [],
   copySelected: [],
+  cutSelected: [],
+  pathName: [],
   intervalSelected: [],
   isLoading: false,
   reload: false,
@@ -48,8 +56,17 @@ export const useFileStore = create<FileStore>((set, get) => ({
     set({
       selectedFiles: file,
     }),
-  setCopySelected: (fileSelecteds: string[]) =>
-    set({ copySelected: fileSelecteds }),
+  setCopySelected: (fileSelecteds: string[]) => {
+    set({ copySelected: fileSelecteds });
+    set({ cutSelected: [] });
+  },
+  setCutSelected: (fileSelecteds: string[]) => {
+    set({ cutSelected: fileSelecteds });
+    set({ copySelected: [] });
+  },
+  setPathName: (pn: string[]) => {
+    set({ pathName: pn });
+  },
   setIntervalSelected: (interval: number[]) =>
     set((state) => ({
       intervalSelected:
@@ -82,5 +99,14 @@ export const useFileStore = create<FileStore>((set, get) => ({
       }
       console.log(intervalSelected);
     }
+  },
+
+  getPathName: async () => {
+    const { selectedFiles } = get();
+    const { setPathName } = get();
+    const names = await invoke<string[]>('get_path_name', {
+      paths: selectedFiles,
+    });
+    setPathName(names);
   },
 }));
