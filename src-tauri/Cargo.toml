@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.5.5", features = [] }
 
 [dependencies]
-tauri = { version = "2.10.2", features = [] }
+tauri = { version = "2.10.2", features = ["protocol-asset"] }
 tauri-plugin-opener = "2.5.3"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
@@ -28,4 +28,6 @@ chrono = "0.4.43"
 tauri-plugin-shell = "2.3.5"
 tokio = "1.49.0"
 image = "0.25.9"
-base64 = "0.22.1"
+dirs = "5.0"
+sha2 = "0.10"
+base64 = "0.22"

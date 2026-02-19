@@ -1,24 +1,24 @@
-import { GearIcon } from '@phosphor-icons/react';
-import { useConfigStore } from '@/stores/ConfigStore';
-import { WorkSpaces } from '@/components/WorkSpaces';
+import { GearIcon } from '@phosphor-icons/react'
+import { useConfigStore } from '@/stores/ConfigStore'
+import { WorkSpaces } from '@/components/WorkSpaces'
 
 export function BottomBar() {
-  const toggleShowConfig = useConfigStore((state) => state.toggleShowConfig);
-  const configIsOpen = useConfigStore((state) => state.configIsOpen);
+  const toggleShowConfig = useConfigStore((state) => state.toggleShowConfig)
+  const configIsOpen = useConfigStore((state) => state.configIsOpen)
   return (
     <>
-      <div className="w-full h-[1px] bg-[var(--border-primary)]" />
-      <div className="flex flex-row pl-2 h-6 w-full bg-[var(--bg-primary)] items-center">
+      <div className="h-[1px] w-full" />
+      <div className="flex h-6 w-full flex-row items-center pl-2">
         <button
-          className="flex items center justify-center w-4 hover:bg-[var(--bg-hover-primary)] rounded-full duration-200"
+          className="items center flex w-4 justify-center rounded-full duration-200 hover:bg-[var(--bg-hover-primary)]"
           onClick={() => toggleShowConfig(!configIsOpen)}
         >
           <GearIcon />
         </button>
-        <div className="flex flex-row w-full h-full items-center justify-center">
+        <div className="flex h-full w-full flex-row items-center justify-center">
           <WorkSpaces />
         </div>
       </div>
     </>
-  );
+  )
 }

@@ -29,8 +29,11 @@
     "@types/react-dom": "19.2.2",
     "@vitejs/plugin-react": "5.0.4",
     "eslint": "10.0.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "7.37.5",
     "globals": "17.3.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "typescript": "5.9.3",
     "typescript-eslint": "8.46.0",
     "vite": "7.1.9"

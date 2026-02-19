@@ -9,20 +9,22 @@ export type ShortcutAction =
   | 'workspace_2'
   | 'workspace_3'
   | 'workspace_4'
-  | 'next_workspace' // ← Novo
-  | 'prev_workspace' // ← Novo
+  | 'next_workspace'
+  | 'prev_workspace'
   | 'go_back'
-  | 'open_terminal';
+  | 'go_forward'
+  | 'open_terminal'
 
 export interface Shortcut {
-  key?: string; // ← Agora opcional (para scroll)
-  scroll?: 'up' | 'down'; // ← Novo: direção do scroll
-  ctrl?: boolean;
-  shift?: boolean;
-  alt?: boolean;
-  description: string;
-  action: ShortcutAction;
-  type?: 'keyboard' | 'scroll'; // ← Tipo de atalho
+  key?: string
+  scroll?: 'up' | 'down'
+  mouseButton?: number // 0=left, 1=middle, 2=right, 3=back, 4=forward
+  ctrl?: boolean
+  shift?: boolean
+  alt?: boolean
+  description: string
+  action: ShortcutAction
+  type?: 'keyboard' | 'scroll' | 'mouse'
 }
 
 export const SHORTCUTS: Record<ShortcutAction, Shortcut> = {
@@ -97,12 +99,20 @@ export const SHORTCUTS: Record<ShortcutAction, Shortcut> = {
     type: 'scroll',
   },
 
+  // ========== ATALHOS COM BOTÕES DO MOUSE ==========
   go_back: {
-    key: 'Backspace',
-    description: 'Voltar',
+    mouseButton: 3, // Botão "Voltar" lateral do mouse
+    description: 'Voltar (Botão lateral esquerdo do mouse)',
     action: 'go_back',
-    type: 'keyboard',
+    type: 'mouse',
   },
+  go_forward: {
+    mouseButton: 4, // Botão "Avançar" lateral do mouse
+    description: 'Avançar (Botão lateral direito do mouse)',
+    action: 'go_forward',
+    type: 'mouse',
+  },
+
   open_terminal: {
     key: 't',
     ctrl: true,
@@ -111,66 +121,84 @@ export const SHORTCUTS: Record<ShortcutAction, Shortcut> = {
     action: 'open_terminal',
     type: 'keyboard',
   },
-};
+}
 
 /**
  * Verifica se uma tecla pressionada corresponde a um atalho de teclado
  */
-export function matchesKeyboardShortcut(
-  event: KeyboardEvent,
-  shortcut: Shortcut,
-): boolean {
-  if (shortcut.type === 'scroll' || !shortcut.key) return false;
+export function matchesKeyboardShortcut(event: KeyboardEvent, shortcut: Shortcut): boolean {
+  if (shortcut.type === 'scroll' || shortcut.type === 'mouse' || !shortcut.key) return false
 
-  const ctrlPressed = event.ctrlKey || event.metaKey;
+  const ctrlPressed = event.ctrlKey || event.metaKey
 
   return (
     event.key.toLowerCase() === shortcut.key.toLowerCase() &&
     (shortcut.ctrl ? ctrlPressed : !ctrlPressed) &&
     (shortcut.shift ? event.shiftKey : !event.shiftKey) &&
     (shortcut.alt ? event.altKey : !event.altKey)
-  );
+  )
 }
 
 /**
  * Verifica se um scroll corresponde a um atalho de scroll
  */
-export function matchesScrollShortcut(
-  event: WheelEvent,
-  shortcut: Shortcut,
-): boolean {
-  if (shortcut.type !== 'scroll' || !shortcut.scroll) return false;
+export function matchesScrollShortcut(event: WheelEvent, shortcut: Shortcut): boolean {
+  if (shortcut.type !== 'scroll' || !shortcut.scroll) return false
 
-  const ctrlPressed = event.ctrlKey || event.metaKey;
-  const scrollDirection = event.deltaY > 0 ? 'down' : 'up';
+  const ctrlPressed = event.ctrlKey || event.metaKey
+  const scrollDirection = event.deltaY > 0 ? 'down' : 'up'
 
   return (
     scrollDirection === shortcut.scroll &&
     (shortcut.ctrl ? ctrlPressed : !ctrlPressed) &&
     (shortcut.shift ? event.shiftKey : !event.shiftKey) &&
     (shortcut.alt ? event.altKey : !event.altKey)
-  );
+  )
+}
+
+/**
+ * Verifica se um botão do mouse corresponde a um atalho de mouse
+ */
+export function matchesMouseShortcut(event: MouseEvent, shortcut: Shortcut): boolean {
+  if (shortcut.type !== 'mouse' || shortcut.mouseButton === undefined) return false
+
+  const ctrlPressed = event.ctrlKey || event.metaKey
+
+  return (
+    event.button === shortcut.mouseButton &&
+    (shortcut.ctrl ? ctrlPressed : !ctrlPressed) &&
+    (shortcut.shift ? event.shiftKey : !event.shiftKey) &&
+    (shortcut.alt ? event.altKey : !event.altKey)
+  )
 }
 
 /**
  * Formata atalho para exibição
  */
 export function formatShortcut(shortcut: Shortcut): string {
-  const parts: string[] = [];
-  const isMac = navigator.platform.toLowerCase().includes('mac');
+  const parts: string[] = []
+  const isMac = navigator.platform.toLowerCase().includes('mac')
 
-  if (shortcut.ctrl) parts.push(isMac ? '⌘' : 'Ctrl');
-  if (shortcut.shift) parts.push(isMac ? '⇧' : 'Shift');
-  if (shortcut.alt) parts.push(isMac ? '⌥' : 'Alt');
+  if (shortcut.ctrl) parts.push(isMac ? '⌘' : 'Ctrl')
+  if (shortcut.shift) parts.push(isMac ? '⇧' : 'Shift')
+  if (shortcut.alt) parts.push(isMac ? '⌥' : 'Alt')
 
   if (shortcut.type === 'scroll') {
-    const scrollIcon = shortcut.scroll === 'up' ? '🖱️↑' : '🖱️↓';
-    parts.push(scrollIcon);
+    parts.push(shortcut.scroll === 'up' ? '🖱️↑' : '🖱️↓')
+  } else if (shortcut.type === 'mouse') {
+    const mouseLabels: Record<number, string> = {
+      0: '🖱️ Esquerdo',
+      1: '🖱️ Meio',
+      2: '🖱️ Direito',
+      3: '🖱️ Voltar',
+      4: '🖱️ Avançar',
+    }
+    parts.push(mouseLabels[shortcut.mouseButton!] ?? `🖱️ Btn${shortcut.mouseButton}`)
   } else if (shortcut.key) {
-    parts.push(formatKey(shortcut.key));
+    parts.push(formatKey(shortcut.key))
   }
 
-  return parts.join(' + ');
+  return parts.join(' + ')
 }
 
 function formatKey(key: string): string {
@@ -182,7 +210,7 @@ function formatKey(key: string): string {
     Backspace: '⌫',
     Delete: 'Del',
     Escape: 'Esc',
-  };
+  }
 
-  return specialKeys[key] || key.toUpperCase();
+  return specialKeys[key] || key.toUpperCase()
 }

@@ -1,7 +1,7 @@
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use std::env;
-use std::fs::{File,create_dir_all, read_dir, read_to_string, rename, write};
+use std::fs::{File,create_dir_all, read_dir, read_to_string,metadata, rename, write};
 use fs_extra::dir::{TransitProcessResult,CopyOptions};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -12,8 +12,8 @@ use tauri_plugin_shell::ShellExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio;
 use std::io::ErrorKind;
-use image::imageops::FilterType;
-use image::ImageReader;
+use image::{ImageReader,codecs::jpeg::JpegEncoder};
+use sha2::{Sha256, Digest};
 use base64::{Engine as _, engine::general_purpose};
 
 static CANCEL_FUNC: AtomicBool = AtomicBool::new(false);
@@ -475,23 +475,84 @@ async fn open_terminal(app: tauri::AppHandle, path: String) -> Result<(), String
     Ok(())
 }
 
+fn get_cache_dir() -> PathBuf {
+    let cache = dirs::cache_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("ocean")
+        .join("thumbnails");
+    
+    create_dir_all(&cache).ok();
+    cache
+}
+
+fn path_to_cache_name(path: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(path.as_bytes());
+    format!("{:x}.jpg", hasher.finalize())
+}
+
 #[tauri::command]
-fn get_thumbnail(path: String, max_size: u32) -> Result<String, String> {
-    let img = ImageReader::open(&path)
-        .map_err(|e| e.to_string())?
-        .decode()
-        .map_err(|e| e.to_string())?;
+async fn get_thumbnail_cached(path: String, max_size: u32) -> Result<String, String> {
+    // Detecta se é SVG
+    let extension = std::path::Path::new(&path)
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
     
-    // Redimensionar mantendo proporção
-    let thumbnail = img.resize(max_size, max_size, FilterType::Lanczos3);
+    if extension.to_lowercase() == "svg" {
+        let svg_content = std::fs::read_to_string(&path)
+            .map_err(|e| e.to_string())?;
+        let encoded = general_purpose::STANDARD.encode(svg_content.as_bytes());
+        return Ok(format!("data:image/svg+xml;base64,{}", encoded));
+    }   
     
-    // Converter para bytes
-    let mut bytes: Vec<u8> = Vec::new();
-    thumbnail.write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-        .map_err(|e| e.to_string())?;
+    let cache_dir = get_cache_dir();
+    let cache_name = path_to_cache_name(&path);
+    let cache_path = cache_dir.join(&cache_name);
+
+    // Verifica se thumbnail existe E está atualizada
+    if cache_path.exists() {
+        let original_modified = metadata(&path)
+            .and_then(|m| m.modified())
+            .ok();
+        let cache_modified = metadata(&cache_path)
+            .and_then(|m| m.modified())
+            .ok();
+
+        // Se thumbnail é mais recente que o arquivo original, retorna o caminho
+        if let (Some(orig), Some(cache)) = (original_modified, cache_modified) {
+            if cache >= orig {
+                return Ok(cache_path.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    // Gera thumbnail em thread separada
+    let path_clone = path.clone();
+    let cache_path_clone = cache_path.clone();
     
-    let base64_string = general_purpose::STANDARD.encode(&bytes);
-    Ok(format!("data:image/jpeg;base64,{}", base64_string))
+    tokio::task::spawn_blocking(move || {
+        let img = ImageReader::open(&path_clone)
+            .map_err(|e| e.to_string())?
+            .with_guessed_format()
+            .map_err(|e| e.to_string())?
+            .decode()
+            .map_err(|e| e.to_string())?;
+
+        let thumb = img.thumbnail(max_size, max_size);
+        let rgb = thumb.into_rgb8();
+
+        let file = File::create(&cache_path_clone)
+            .map_err(|e| e.to_string())?;
+        
+        JpegEncoder::new_with_quality(file, 75)
+            .encode_image(&rgb)
+            .map_err(|e| e.to_string())?;
+
+        Ok(cache_path_clone.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -516,7 +577,7 @@ pub fn run() {
             open_terminal,
             move_items_to,
             get_path_name,
-            get_thumbnail
+            get_thumbnail_cached
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
