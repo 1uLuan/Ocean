@@ -1,42 +1,37 @@
-import { useFileStore } from '@/stores/FileStore';
-import { useEffect } from 'react';
-import { usePopupControl } from '@/stores/PopupControl';
-import { useContextMenuStore } from '@/stores/ContextMenuStore';
+import { For, createEffect } from 'solid-js'
+import { useFileStore } from '@/stores/FileStore'
+import { usePopupControl } from '@/stores/PopupControl'
+import { useContextMenuStore } from '@/stores/ContextMenuStore'
 export function WarningPopup() {
-  const getPathName = useFileStore((state) => state.getPathName);
-  const pathName = useFileStore((state) => state.pathName);
-  const WarningPopup = usePopupControl((state) => state.warningPopup);
-  const setWarningPopup = usePopupControl((state) => state.setWarningPopup);
-  const del = useContextMenuStore((state) => state.delete);
+  const fil = useFileStore()
+  const pop = usePopupControl()
+  const cont = useContextMenuStore()
 
-  useEffect(() => {
-    getPathName();
-  }, [WarningPopup]);
+  createEffect(() => {
+    fil.getPathName()
+  })
 
   return (
     <>
-      {WarningPopup && (
-        <div className="absolute w-full h-full z-40 grid place-items-center">
-          <div className="flex flex-col w-80 h-96 z-50 p-1 gap-1 text-[0.9rem] bg-[var(--bg-tertiary)] rounded-xl">
-            <div className="flex-1">Do You Really Want Delete This Item?</div>
-            <ul className="flex-3 p-1 bg-[var(--bg-secondary)] border border-zinc-900 rounded-xl">
-              {pathName.map((name) => (
-                <li>{name}</li>
-              ))}
+      {pop.warningPopup && (
+        <div class="absolute z-40 grid h-full w-full place-items-center">
+          <div class="z-50 flex h-96 w-80 flex-col gap-1 rounded-xl bg-[var(--bg-tertiary)] p-1 text-[0.9rem]">
+            <div class="flex-1">Do You Really Want Delete This Item?</div>
+            <ul class="flex-3 rounded-xl border border-zinc-900 bg-[var(--bg-secondary)] p-1">
+              <For each={fil.pathName}>{(name) => name}</For>
             </ul>
-            <div className="flex flex-row justify-between p-1">
+            <div class="flex flex-row justify-between p-1">
               <button
-                className="w-30 h-10 rounded-xl bg-[var(--button-bg)] hover:bg-red-600"
+                class="h-10 w-30 rounded-xl bg-[var(--button-bg)] hover:bg-red-600"
                 onClick={() => {
-                  del();
-                  setWarningPopup(false);
+                  ;(cont.delete(), pop.setWarningPopup(false))
                 }}
               >
                 Delete
               </button>
               <button
-                className="w-30 h-10 rounded-xl bg-[var(--button-bg)] hover:bg-[var(--button-hover)]"
-                onClick={() => setWarningPopup(false)}
+                class="h-10 w-30 rounded-xl bg-[var(--button-bg)] hover:bg-[var(--button-hover)]"
+                onClick={() => pop.setWarningPopup(false)}
               >
                 Cancel
               </button>
@@ -45,5 +40,5 @@ export function WarningPopup() {
         </div>
       )}
     </>
-  );
+  )
 }

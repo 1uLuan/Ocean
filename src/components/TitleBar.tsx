@@ -1,37 +1,37 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { CornersOutIcon, MinusIcon, XIcon } from '@phosphor-icons/react';
-import { useConfigStore } from '@/stores/ConfigStore';
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { CornersOut, Minus, X } from 'phosphor-solid'
+import { useConfigStore } from '@/stores/ConfigStore'
 export function TitleBar() {
-  const appWindow = getCurrentWindow();
-  const config = useConfigStore((state) => state.config);
+  const appWindow = getCurrentWindow()
+  const conf = useConfigStore()
   return (
     <>
-      {config.title_bar && (
+      {conf.config.title_bar && (
         <div
           data-tauri-drag-region
-          className="flex flex-row z-50 p-1 gap-1 items-center w-screen h-6 bg-[var(--bg-primary)]"
+          class="z-50 flex h-6 w-screen flex-row items-center gap-1 bg-[var(--bg-secondary)] p-1"
         >
-          <div className="text-blue-400">Ocean</div>
+          <div class="text-blue-400">Ocean</div>
           <button
-            className="flex w-5 h-5 hover:bg-[var(--bg-hover-primary)] rounded-md ml-auto items-center justify-center"
+            class="ml-auto flex h-5 w-5 items-center justify-center rounded-md hover:bg-[var(--bg-hover-primary)]"
             onClick={() => appWindow.minimize()}
           >
-            <MinusIcon />
+            <Minus />
           </button>
           <button
-            className="flex w-5 h-5 hover:bg-[var(--bg-hover-primary)] rounded-md items-center justify-center"
+            class="flex h-5 w-5 items-center justify-center rounded-md hover:bg-[var(--bg-hover-primary)]"
             onClick={() => appWindow.maximize()}
           >
-            <CornersOutIcon />
+            <CornersOut />
           </button>
           <button
-            className="flex w-5 h-5 hover:bg-[var(--bg-hover-primary)] rounded-md items-center justify-center "
+            class="flex h-5 w-5 items-center justify-center rounded-md hover:bg-[var(--bg-hover-primary)]"
             onClick={() => appWindow.close()}
           >
-            <XIcon />
+            <X />
           </button>
         </div>
       )}
     </>
-  );
+  )
 }

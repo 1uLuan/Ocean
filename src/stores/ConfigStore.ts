@@ -1,91 +1,90 @@
-import { create } from 'zustand';
-import { invoke } from '@tauri-apps/api/core';
+import { createStore } from 'solid-js/store'
+import { invoke } from '@tauri-apps/api/core'
 
 type ConfigType = {
-  theme: string;
-  toggle_hidden_files: boolean;
-  title_bar: boolean;
-};
+  theme: string
+  toggle_hidden_files: boolean
+  title_bar: boolean
+}
 
-const configJson = invoke<ConfigType>('load_config');
+type ConfigState = {
+  config: ConfigType
+  configIsOpen: boolean
+  geralConfig: boolean
+  themesConfig: boolean
+}
 
-type ConfigStore = {
-  config: ConfigType;
-  configIsOpen: boolean;
-  geralConfig: boolean;
-  themesConfig: boolean;
+const defaultConfig: ConfigType = {
+  theme: 'light',
+  toggle_hidden_files: false,
+  title_bar: true,
+}
 
-  setConfig: (value: ConfigType) => void;
-  toggleShowConfig: (value: boolean) => void;
-  setGeralConfig: (value: boolean) => void;
-  setThemesConfig: (value: boolean) => void;
+const [state, setState] = createStore<ConfigState>({
+  config: defaultConfig,
+  configIsOpen: false,
+  geralConfig: false,
+  themesConfig: false,
+})
 
-  saveConfig: () => void;
-  toggleHiddenFiles: () => void;
-  changeTheme: (theme: string) => void;
-  toggleTitleBar: (value: boolean) => void;
-};
+invoke<ConfigType>('load_config')
+  .then((c) => setState({ config: c }))
+  .catch((e) => console.error('Failed to load config', e))
 
-export const useConfigStore = create<ConfigStore>((set, get) => {
-  const defaultConfig: ConfigType = {
-    theme: 'light',
-    toggle_hidden_files: false,
-    title_bar: true,
-  };
+function setConfig(value: Partial<ConfigType>) {
+  setState('config', (prev) => ({ ...prev, ...value }))
+}
 
-  // load saved config asynchronously and update the store when ready
-  configJson
-    .then((c) => set({ config: c }))
-    .catch((e) => {
-      // optional: keep default config on error
-      console.error('Failed to load config', e);
-    });
+function toggleShowConfig(value: boolean) {
+  setState({ configIsOpen: value })
+}
 
-  return {
-    config: defaultConfig,
-    configIsOpen: false,
-    geralConfig: false,
-    themesConfig: false,
+function setGeralConfig(value: boolean) {
+  setState({ geralConfig: value, themesConfig: false })
+}
 
-    setConfig: (c: ConfigType) =>
-      set((state) => ({ config: { ...state.config, ...c } })),
-    toggleShowConfig: (value: boolean) => set({ configIsOpen: value }),
-    saveConfig: () => {
-      const { config } = get();
-      invoke('save_config', { config: config });
-    },
-    toggleHiddenFiles: () => {
-      set((state) => ({
-        config: {
-          ...state.config,
-          toggle_hidden_files: !state.config.toggle_hidden_files,
-        },
-      }));
-      get().saveConfig();
-    },
-    toggleTitleBar(value: boolean) {
-      set((state) => ({
-        config: {
-          ...state.config,
-          title_bar: value,
-        },
-      }));
-      get().saveConfig();
-    },
-    changeTheme: (theme: string) => {
-      set((state) => ({
-        config: {
-          ...state.config,
-          theme: theme,
-        },
-      }));
-      get().saveConfig();
-    },
-    setGeralConfig: (value: boolean) => {
-      set({ geralConfig: value, themesConfig: false });
-    },
-    setThemesConfig: (value: boolean) => {
-      set({ themesConfig: value, geralConfig: false });
-    },
-  };
-});
+function setThemesConfig(value: boolean) {
+  setState({ themesConfig: value, geralConfig: false })
+}
+
+function saveConfig() {
+  invoke('save_config', { config: state.config })
+}
+
+function toggleHiddenFiles() {
+  setState('config', 'toggle_hidden_files', (prev) => !prev)
+  saveConfig()
+}
+
+function toggleTitleBar(value: boolean) {
+  setState('config', 'title_bar', value)
+  saveConfig()
+}
+
+function changeTheme(theme: string) {
+  setState('config', 'theme', theme)
+  saveConfig()
+}
+
+export const useConfigStore = () => ({
+  get config() {
+    return state.config
+  },
+  get configIsOpen() {
+    return state.configIsOpen
+  },
+  get geralConfig() {
+    return state.geralConfig
+  },
+  get themesConfig() {
+    return state.themesConfig
+  },
+  setConfig,
+  toggleShowConfig,
+  setGeralConfig,
+  setThemesConfig,
+  saveConfig,
+  toggleHiddenFiles,
+  toggleTitleBar,
+  changeTheme,
+})

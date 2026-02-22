@@ -1,5 +1,5 @@
 // src/hooks/useKeyboardShortcuts.ts
-import { useEffect } from 'react'
+import { onCleanup, onMount } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import {
   SHORTCUTS,
@@ -13,91 +13,82 @@ import { useFileStore } from '@/stores/FileStore'
 import { useContextMenuStore } from '@/stores/ContextMenuStore'
 
 export function useKeyboardShortcuts() {
-  const path = useNavigationStore((state) => state.path)
-  const actualWorkspace = useNavigationStore((state) => state.actualWorkspace)
-  const goBackPath = useNavigationStore((state) => state.goBackPath)
-  const goNextPath = useNavigationStore((state) => state.goNextPath)
-  const setActualWorkspace = useNavigationStore((state) => state.setActualWorkspace)
+  const fil = useFileStore()
+  const cont = useContextMenuStore()
+  const nav = useNavigationStore()
 
-  const selectedFiles = useFileStore((state) => state.selectedFiles)
-  const setCopySelected = useFileStore((state) => state.setCopySelected)
-  const pasteDir = useContextMenuStore((state) => state.pasteDir)
-  const resetSelected = useFileStore((state) => state.resetSelected)
-  const reload = useFileStore((state) => state.reload)
-  const setReload = useFileStore((state) => state.setReload)
-
-  useEffect(() => {
+  onMount(() => {
     // ========== EXECUTAR AÇÃO DO ATALHO ==========
     const handleShortcutAction = (action: ShortcutAction) => {
       console.log('Atalho acionado:', action)
 
       switch (action) {
         case 'copy':
-          if (selectedFiles.length > 0) setCopySelected(selectedFiles)
+          if (fil.selectedFiles.length > 0) fil.setCopySelected(fil.selectedFiles)
           break
 
         case 'paste':
-          pasteDir()
+          if (fil.copySelected.length > 0 || fil.cutSelected.length > 0) cont.pasteDir()
           break
 
         case 'delete':
-          if (selectedFiles.length > 0) {
-            invoke('move_to_trash', { dirPath: selectedFiles })
+          if (fil.selectedFiles.length > 0) {
+            invoke('move_to_trash', { dirPath: fil.selectedFiles })
               .then(() => {
-                resetSelected()
-                setReload(!reload)
+                fil.resetSelected()
+                fil.setReload(!fil.reload)
               })
               .catch((err) => console.error('Erro ao deletar:', err))
           }
           break
 
         case 'refresh':
-          setReload(!reload)
+          fil.setReload(!fil.reload)
           break
 
         // ========== WORKSPACES ==========
         case 'workspace_1':
-          setActualWorkspace(0)
-          setReload(!reload)
+          nav.setActualWorkspace(0)
+          fil.setReload(!fil.reload)
           break
         case 'workspace_2':
-          setActualWorkspace(1)
-          setReload(!reload)
+          nav.setActualWorkspace(1)
+          fil.setReload(!fil.reload)
           break
         case 'workspace_3':
-          setActualWorkspace(2)
-          setReload(!reload)
+          nav.setActualWorkspace(2)
+          fil.setReload(!fil.reload)
           break
         case 'workspace_4':
-          setActualWorkspace(3)
-          setReload(!reload)
+          nav.setActualWorkspace(3)
+          fil.setReload(!fil.reload)
           break
 
         // ========== SCROLL WORKSPACES ==========
         case 'next_workspace': {
-          const next = ((actualWorkspace + 1) % 4) as 0 | 1 | 2 | 3
-          setActualWorkspace(next)
-          setReload(!reload)
+          const next = ((nav.actualWorkspace + 1) % 4) as 0 | 1 | 2 | 3
+          nav.setActualWorkspace(next)
+          fil.setReload(!fil.reload)
           break
         }
         case 'prev_workspace': {
-          const prev = ((actualWorkspace - 1 + 4) % 4) as 0 | 1 | 2 | 3
-          setActualWorkspace(prev)
-          setReload(!reload)
+          const prev = ((nav.actualWorkspace - 1 + 4) % 4) as 0 | 1 | 2 | 3
+          nav.setActualWorkspace(prev)
+          fil.setReload(!fil.reload)
           break
         }
 
         // ========== NAVEGAÇÃO ==========
         case 'go_back':
-          goBackPath()
+          nav.goBackPath()
           break
 
         case 'go_forward':
-          goNextPath()
+          nav.goNextPath()
           break
 
         case 'open_terminal':
-          invoke('open_terminal', { path }).catch((err) =>
+          invoke('open_terminal', { path: nav.path }).catch((err) =>
             console.error('Erro ao abrir terminal:', err)
           )
           break
@@ -136,8 +127,6 @@ export function useKeyboardShortcuts() {
 
     // ========== HANDLER DE BOTÕES DO MOUSE ==========
     const handleMouseDown = (e: MouseEvent) => {
-      // Ignorar botões primários (0=esquerdo, 2=direito) para não conflitar
-      // com cliques normais, a não ser que estejam definidos nos SHORTCUTS
       for (const [action, shortcut] of Object.entries(SHORTCUTS)) {
         if (shortcut.type === 'mouse' && matchesMouseShortcut(e, shortcut)) {
           e.preventDefault()
@@ -152,25 +141,12 @@ export function useKeyboardShortcuts() {
     window.addEventListener('wheel', handleWheel, { passive: false })
     window.addEventListener('mousedown', handleMouseDown)
 
-    console.log('✅ Atalhos ativados (teclado + scroll + mouse)')
-
-    return () => {
+    onCleanup(() => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('wheel', handleWheel)
       window.removeEventListener('mousedown', handleMouseDown)
-      console.log('❌ Atalhos desativados')
-    }
-  }, [
-    selectedFiles,
-    resetSelected,
-    reload,
-    setReload,
-    setActualWorkspace,
-    actualWorkspace,
-    goBackPath,
-    goNextPath,
-    path,
-  ])
+    })
+  })
 }
 
 export default useKeyboardShortcuts

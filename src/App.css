@@ -23,7 +23,7 @@
 
 *::-webkit-scrollbar {
   width: 6px;
-  height: 4px;
+  height: 6px;
 }
 
 /*scrollbar style*/
@@ -50,90 +50,190 @@
 
 /*tema claro*/
 :root {
-  /* Backgrounds */
+  /* =========================
+     BACKGROUNDS
+  ========================== */
   --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --bg-tertiary: #dbdbdb;
-  --bg-hover-primary: #9a9a9a;
-  --bg-hover-secondary: #b5b5b5;
+  --bg-secondary: #f3f3f3;
+  --bg-tertiary: #eaeaea;
+  --bg-hover-primary: #e8e8e8;
+  --bg-hover-secondary: #dcdcdc;
 
-  /* Textos */
-  --text-primary: #1a1a1a;
-  --text-secondary: #4a4a4a;
-  --text-muted: #6b6b6b;
+  /* Superfícies */
+  --bg-card: #ffffff;
+  --bg-card-hover: #f5f5f5;
+  --bg-input: #ffffff;
+  --bg-modal: #ffffff;
+  --bg-tooltip: #f3f3f3;
 
-  /* Bordas */
+  /* =========================
+     TEXTOS
+  ========================== */
+  --text-primary: #1e1e1e;
+  --text-secondary: #444444;
+  --text-muted: #6a6a6a;
+
+  /* =========================
+     BORDAS
+  ========================== */
   --border-primary: #e0e0e0;
-  --border-secondary: #d0d0d0;
+  --border-secondary: #d4d4d4;
+  --border-glow: 1px solid #007acc40;
 
-  /* Componentes específicos */
-  --panel-bg: #fafafa;
-  --button-bg: #ffffff;
-  --button-hover: #f5f5f5;
-  --input-bg: #ffffff;
-  --input-border: #cccccc;
+  /* =========================
+     ACCENT
+  ========================== */
+  --accent-primary: #007acc;
+  --accent-secondary: #005a9e;
+  --accent-tertiary: #2899f5;
+  --accent-glow: #007acc30;
 
-  /* Accent colors */
-  --accent-primary: #3b82f6;
-  --accent-secondary: #60a5fa;
+  /* Estados */
+  --accent-danger: #c72e2e;
+  --accent-success: #16825d;
+  --accent-warning: #b89500;
+
+  /* Seleção */
+  --bg-selection: #add6ff;
+  --bg-selection-soft: #add6ff55;
+  --bg-focus-ring: #007acc;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.15);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
 }
 
 /* Tema Escuro */
 [data-theme='dark'] {
-  /* Backgrounds */
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #2a2a2a;
-  --bg-tertiary: #3a3a3a;
-  --bg-hover-primary: #2f2f2f;
-  --bg-hover-secondary: #292929;
+  /* =========================
+     BACKGROUNDS
+  ========================== */
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d2d;
+  --bg-hover-primary: #2a2d2e;
+  --bg-hover-secondary: #37373d;
 
-  /* Textos */
-  --text-primary: #ffffff;
-  --text-secondary: #e0e0e0;
-  --text-muted: #a0a0a0;
+  /* Superfícies */
+  --bg-card: #252526;
+  --bg-card-hover: #2d2d30;
+  --bg-input: #3c3c3c;
+  --bg-modal: #252526;
+  --bg-tooltip: #2d2d30;
 
-  /* Bordas */
-  --border-primary: #3a3a3a;
-  --border-secondary: #4a4a4a;
+  /* =========================
+     TEXTOS
+  ========================== */
+  --text-primary: #d4d4d4;
+  --text-secondary: #cccccc;
+  --text-muted: #808080;
 
-  /* Componentes específicos */
-  --panel-bg: #252525;
-  --button-bg: #2a2a2a;
-  --button-hover: #353535;
-  --input-bg: #2a2a2a;
-  --input-border: #404040;
+  /* =========================
+     BORDAS
+  ========================== */
+  --border-primary: #3c3c3c;
+  --border-secondary: #2d2d30;
+  --border-glow: 1px solid #007acc30;
 
-  /* Accent colors */
-  --accent-primary: #60a5fa;
-  --accent-secondary: #3b82f6;
+  /* =========================
+     ACCENT
+  ========================== */
+  --accent-primary: #007acc;
+  --accent-secondary: #2899f5;
+  --accent-tertiary: #4fc1ff;
+  --accent-glow: #007acc40;
+
+  /* Estados */
+  --accent-danger: #f14c4c;
+  --accent-success: #23d18b;
+  --accent-warning: #cca700;
+
+  /* Seleção */
+  --bg-selection: #264f78;
+  --bg-selection-soft: #264f7830;
+  --bg-focus-ring: #007acc;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.6);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
 }
 
 /* Tema Ocean */
 [data-theme='ocean'] {
-  /* Backgrounds */
-  --bg-primary: linear-gradient(to right, #1f2e54, #1c2d56);
-  --bg-secondary: #283045;
-  --bg-tertiary: rgb(40, 49, 72);
-  --bg-hover-primary: #5051646b;
-  --bg-hover-secondary: #16223f;
+  /* =========================
+     BACKGROUNDS (VSCode-like)
+  ========================== */
+  --bg-primary: #0b1220; /* fundo principal */
+  --bg-secondary: #0f172a; /* sidebar */
+  --bg-tertiary: #111c33; /* áreas elevadas */
+  --bg-hover-primary: #1b2a44; /* hover sutil */
+  --bg-hover-secondary: #16213a; /* seleção leve */
 
-  /* Textos */
-  --text-primary: #cdcdcd;
-  --text-secondary: #bebebe;
-  --text-muted: #838383;
+  /* Superfícies */
+  --bg-card: #0f1b2d;
+  --bg-card-hover: #15243b;
+  --bg-input: #0a1626;
+  --bg-modal: #0c1a2c;
+  --bg-tooltip: #1a2f4a;
 
-  /* Bordas */
-  --border-primary: #626262;
-  --border-secondary: #4a4a4a;
+  /* =========================
+     TEXTOS (alto contraste)
+  ========================== */
+  --text-primary: #dbe7f5; /* quase branco azulado */
+  --text-secondary: #9fb3c8; /* texto secundário */
+  --text-muted: #6b85a3; /* descrições */
 
-  /* Componentes específicos */
-  --panel-bg: #252525;
-  --button-bg: #2a2a2a;
-  --button-hover: #353535;
-  --input-bg: #2a2a2a;
-  --input-border: #404040;
+  /* =========================
+     BORDAS (sutis)
+  ========================== */
+  --border-primary: #1a2a44;
+  --border-secondary: #16233a;
+  --border-glow: 1px solid #38bdf820;
 
-  /* Accent colors */
-  --accent-primary: #60a5fa;
-  --accent-secondary: #3b82f6;
+  /* =========================
+     ACCENT (azul VSCode)
+  ========================== */
+  --accent-primary: #3b82f6; /* azul principal */
+  --accent-secondary: #2563eb; /* hover */
+  --accent-tertiary: #60a5fa; /* highlight */
+  --accent-glow: #3b82f640;
+
+  /* Estados */
+  --accent-danger: #ef4444;
+  --accent-success: #22c55e;
+  --accent-warning: #f59e0b;
+
+  /* =========================
+     SELEÇÃO / ATIVO
+  ========================== */
+  --bg-selection: #1d4ed8;
+  --bg-selection-soft: #1d4ed830;
+  --bg-focus-ring: #3b82f6;
+
+  /* =========================
+     SOMBRAS (profundidade suave)
+  ========================== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.6);
+  --shadow-accent: 0 0 14px #3b82f620;
+
+  /* =========================
+     RADIUS (moderno)
+  ========================== */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
 }

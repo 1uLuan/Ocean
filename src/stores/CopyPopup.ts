@@ -1,51 +1,81 @@
-import { invoke } from '@tauri-apps/api/core';
-import { useFileStore } from './FileStore';
-import { create } from 'zustand';
+import { createStore } from 'solid-js/store'
+import { invoke } from '@tauri-apps/api/core'
+import { useFileStore } from './FileStore'
 
-type CopyPopup = {
-  copyProgress: boolean;
-  progress: number;
-  fileOnCopy: string;
-  total: number;
-  elapsed_secs: number;
-  setShowCopyProgress: (value: boolean) => void;
-  setProgress: (v: number) => void;
-  setFileOnCopy: (v: string) => void;
-  setTotal: (v: number) => void;
-  setElapsed_secs: (v: number) => void;
-  cancelCopy: () => void;
-};
+type CopyPopupState = {
+  copyProgress: boolean
+  progress: number
+  fileOnCopy: string
+  total: number
+  elapsed_secs: number
+}
 
 export type TypeCopyProgress = {
-  current: number;
-  file: string;
-  percent: number;
-  file_percent: number;
-  total: number;
-  elapsed_secs: number;
-  copied_bytes: number;
-  total_bytes: number;
-};
+  current: number
+  file: string
+  percent: number
+  file_percent: number
+  total: number
+  elapsed_secs: number
+  copied_bytes: number
+  total_bytes: number
+}
 
-export const useCopyPopupStore = create<CopyPopup>((set, get) => ({
+const [state, setState] = createStore<CopyPopupState>({
   copyProgress: false,
   progress: 0,
   fileOnCopy: '',
   total: 0,
   elapsed_secs: 0,
-  setShowCopyProgress: (sc: boolean) => set({ copyProgress: sc }),
-  setProgress: (v: number) => set({ progress: v }),
-  setFileOnCopy: (v: string) => set({ fileOnCopy: v }),
-  setTotal: (v: number) => set({ total: v }),
-  setElapsed_secs: (v: number) => set({ elapsed_secs: v }),
+})
 
-  cancelCopy: async () => {
-    const { setShowCopyProgress } = get();
-    const reload = useFileStore.getState().reload;
-    const setReload = useFileStore.getState().setReload;
-    await invoke('cancel_func');
-    setShowCopyProgress(false);
+function setShowCopyProgress(value: boolean) {
+  setState({ copyProgress: value })
+}
 
-    setReload(!reload);
+function setProgress(v: number) {
+  setState({ progress: v })
+}
+
+function setFileOnCopy(v: string) {
+  setState({ fileOnCopy: v })
+}
+
+function setTotal(v: number) {
+  setState({ total: v })
+}
+
+function setElapsed_secs(v: number) {
+  setState({ elapsed_secs: v })
+}
+
+async function cancelCopy() {
+  const file = useFileStore()
+  await invoke('cancel_func')
+  setShowCopyProgress(false)
+  file.setReload(!file.reload)
+}
+
+export const useCopyPopupStore = () => ({
+  get copyProgress() {
+    return state.copyProgress
   },
-}));
+  get progress() {
+    return state.progress
+  },
+  get fileOnCopy() {
+    return state.fileOnCopy
+  },
+  get total() {
+    return state.total
+  },
+  get elapsed_secs() {
+    return state.elapsed_secs
+  },
+  setShowCopyProgress,
+  setProgress,
+  setFileOnCopy,
+  setTotal,
+  setElapsed_secs,
+  cancelCopy,
+})

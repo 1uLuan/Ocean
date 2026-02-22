@@ -1,41 +1,26 @@
-import { create } from 'zustand';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core'
+import { createStore } from 'solid-js/store'
 
 export type Fileinfo = {
-  name: string;
-  ftype: string;
-  last_modified: number;
-  size: number;
-  path: string;
-};
+  name: string
+  ftype: string
+  last_modified: number
+  size: number
+  path: string
+}
 
 type FileStore = {
-  files: Fileinfo[];
-  selectedFiles: string[];
-  copySelected: string[];
-  cutSelected: string[];
-  pathName: string[];
-  intervalSelected: number[];
-  isLoading: boolean;
-  reload: boolean;
+  files: Fileinfo[]
+  selectedFiles: string[]
+  copySelected: string[]
+  cutSelected: string[]
+  pathName: string[]
+  intervalSelected: number[]
+  isLoading: boolean
+  reload: boolean
+}
 
-  setFiles: (files: Fileinfo[]) => void;
-  toggleSelected: (selectedFiles: string) => void;
-  setSelected: (selectedFiles: string[]) => void;
-  setCopySelected: (copySelected: string[]) => void;
-  setCutSelected: (cutSelected: string[]) => void;
-  setPathName: (pathName: string[]) => void;
-  setIntervalSelected: (intervalSelected: number[]) => void;
-  resetInterval: () => void;
-  resetSelected: () => void;
-  setIsLoading: (isLoading: boolean) => void;
-  setReload: (reload: boolean) => void;
-  isSelected: (value: string) => boolean;
-  intervalSelection: (files: Fileinfo[]) => void;
-  getPathName: () => void;
-};
-
-export const useFileStore = create<FileStore>((set, get) => ({
+const [state, setState] = createStore<FileStore>({
   files: [],
   selectedFiles: [],
   copySelected: [],
@@ -44,69 +29,122 @@ export const useFileStore = create<FileStore>((set, get) => ({
   intervalSelected: [],
   isLoading: false,
   reload: false,
+})
 
-  setFiles: (fl: Fileinfo[]) => set({ files: fl }),
-  toggleSelected: (file: string) =>
-    set((state) => ({
-      selectedFiles: state.selectedFiles.includes(file)
-        ? state.selectedFiles.filter((f) => f !== file)
-        : [...state.selectedFiles, file],
-    })),
-  setSelected: (file: string[]) =>
-    set({
-      selectedFiles: file,
-    }),
-  setCopySelected: (fileSelecteds: string[]) => {
-    set({ copySelected: fileSelecteds });
-    set({ cutSelected: [] });
-  },
-  setCutSelected: (fileSelecteds: string[]) => {
-    set({ cutSelected: fileSelecteds });
-    set({ copySelected: [] });
-  },
-  setPathName: (pn: string[]) => {
-    set({ pathName: pn });
-  },
-  setIntervalSelected: (interval: number[]) =>
-    set((state) => ({
-      intervalSelected:
-        state.intervalSelected.length === 2
-          ? interval
-          : [...state.intervalSelected, ...interval],
-    })),
-  resetInterval: () => set({ intervalSelected: [] }),
-  resetSelected: () => set({ selectedFiles: [] }),
-  setIsLoading: (il: boolean) => set({ isLoading: il }),
-  setReload: (rl: boolean) => set({ reload: rl }),
+//SET FILES
+function setFiles(files: Fileinfo[]) {
+  setState({ files })
+}
+//
 
-  isSelected: (fileName: string) => {
-    const { selectedFiles } = get();
-    return selectedFiles.includes(fileName);
-  },
+//COPY AND COPY SELECTED FILES
+function setCopySelected(fileSelecteds: string[]) {
+  ;(setState({ copySelected: fileSelecteds }), setState({ cutSelected: [] }))
+}
+function setCutSelected(fileSelecteds: string[]) {
+  ;(setState({ cutSelected: fileSelecteds }), setState({ copySelected: [] }))
+}
+//
 
-  intervalSelection: (files: Fileinfo[]) => {
-    const { intervalSelected } = get();
-    if (intervalSelected.length === 2) {
-      const { toggleSelected } = get();
-      const { resetSelected } = get();
-      resetSelected();
+//SELECTED FILES
+function toggleSelected(file: string) {
+  setState('selectedFiles', (prev) =>
+    prev.includes(file) ? prev.filter((f) => f !== file) : [...prev, file]
+  )
+}
+function setSelected(files: string[]) {
+  setState({ selectedFiles: files })
+}
+function resetSelected() {
+  setState({ selectedFiles: [] })
+}
+function isSelected(fileName: string) {
+  return state.selectedFiles.includes(fileName)
+}
 
-      const f = Math.min(...intervalSelected);
-      const l = Math.max(...intervalSelected);
+//INTERVAL SELECTED
+function setIntervalSelected(interval: number[]) {
+  setState('intervalSelected', (prev) =>
+    prev.length === 2 ? interval : [...state.intervalSelected, ...interval]
+  )
+}
+function resetInterval() {
+  setState({ intervalSelected: [] })
+}
+function intervalSelection(files: Fileinfo[]) {
+  if (state.intervalSelected.length === 2) {
+    resetSelected()
 
-      for (let i = f; i <= l; i++) {
-        toggleSelected(files[i].path);
-      }
-      console.log(intervalSelected);
+    const f = Math.min(...state.intervalSelected)
+    const l = Math.max(...state.intervalSelected)
+
+    for (let i = f; i <= l; i++) {
+      toggleSelected(files[i].path)
     }
+    console.log(state.intervalSelected)
+  }
+}
+//
+
+//PATH NAME
+function setPathName(pathName: string[]) {
+  setState({ pathName })
+}
+
+async function getPathName() {
+  const names = await invoke<string[]>('get_path_name', {
+    paths: state.selectedFiles,
+  })
+  setPathName(names)
+}
+//
+
+function setIsLoading(isLoading: boolean) {
+  setState({ isLoading })
+}
+
+function setReload(reload: boolean) {
+  setState({ reload })
+}
+
+export const useFileStore = () => ({
+  get files() {
+    return state.files
+  },
+  get selectedFiles() {
+    return state.selectedFiles
+  },
+  get copySelected() {
+    return state.copySelected
+  },
+  get cutSelected() {
+    return state.cutSelected
+  },
+  get pathName() {
+    return state.pathName
+  },
+  get intervalSelected() {
+    return state.intervalSelected
+  },
+  get isLoading() {
+    return state.isLoading
+  },
+  get reload() {
+    return state.reload
   },
 
-  getPathName: async () => {
-    const { selectedFiles } = get();
-    const { setPathName } = get();
-    const names = await invoke<string[]>('get_path_name', {
-      paths: selectedFiles,
-    });
-    setPathName(names);
-  },
-}));
+  setFiles,
+  toggleSelected,
+  setSelected,
+  setCopySelected,
+  setCutSelected,
+  setPathName,
+  setIntervalSelected,
+  resetInterval,
+  resetSelected,
+  setIsLoading,
+  setReload,
+  isSelected,
+  intervalSelection,
+  getPathName,
+})

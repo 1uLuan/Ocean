@@ -1,184 +1,201 @@
-import { create } from 'zustand';
-import { invoke } from '@tauri-apps/api/core';
-import { useNavigationStore } from '@/stores/NavigationStore';
-import { useFileStore } from '@/stores/FileStore';
-import { useCopyPopupStore } from '@/stores/CopyPopup';
+import { createStore } from 'solid-js/store'
+import { invoke } from '@tauri-apps/api/core'
+import { useNavigationStore } from '@/stores/NavigationStore'
+import { useFileStore } from '@/stores/FileStore'
+import { usePopupControl } from '@/stores/PopupControl'
 
-type MenuPosition = { x: number; y: number } | null;
+type MenuPosition = { x: number; y: number } | null
 
-type MenuStore = {
-  showMenu: boolean;
-  menuPos: MenuPosition;
-  showDirMenu: boolean;
-  isOpen: boolean; //|-
-  text: string; //|----NamePopup!
-  onEnter?: () => void; //|-
+type MenuState = {
+  showMenu: boolean
+  menuPos: MenuPosition
+  showDirMenu: boolean
+  isOpen: boolean
+  text: string
+  onEnter?: () => void
+}
 
-  setShowMenu: (value: boolean) => void;
-  setMenuPos: (value: MenuPosition) => void;
-  setShowDirMenu: (value: boolean) => void;
-  setIsOpen: (value: boolean) => void; //|-
-  setText: (valeu: string) => void; //|----NamePopup!
-  setOnEnter: (fn: () => void) => void; //|-
-
-  handleContextMenu: (e: React.MouseEvent) => void;
-  handleRename: () => void;
-  makeDir: () => void;
-  makeFile: () => void;
-  openPopup: () => void;
-  closePopup: () => void;
-  pasteDir: () => void;
-  moveToTrash: () => void;
-  delete: () => void;
-  moveDir: () => void;
-};
-export const useContextMenuStore = create<MenuStore>((set, get) => ({
+const [state, setState] = createStore<MenuState>({
   showMenu: false,
   menuPos: null,
   showDirMenu: false,
   isOpen: false,
   text: '',
   onEnter: undefined,
+})
 
-  setShowMenu: (sm: boolean) => set({ showMenu: sm }),
-  setMenuPos: (mp: MenuPosition) => set({ menuPos: mp }),
-  setShowDirMenu: (sdm: boolean) => set({ showDirMenu: sdm }),
-  setOnEnter: (fn: () => void) => set({ onEnter: fn }),
-  setIsOpen: (io: boolean) => set({ isOpen: io }),
-  setText: (st: string) => set({ text: st }),
-  openPopup: () => set({ isOpen: true }),
-  closePopup: () => set({ isOpen: false, text: '' }),
+function setShowMenu(value: boolean) {
+  setState({ showMenu: value })
+}
 
-  handleContextMenu(e: React.MouseEvent) {
-    e.preventDefault();
-    set({
-      showMenu: true,
-      menuPos: { x: e.pageX, y: e.pageY },
-    });
-  },
-  handleRename: async () => {
-    const path = useNavigationStore.getState().path;
-    const selectedFiles = useFileStore.getState().selectedFiles;
-    const reload = useFileStore.getState().reload;
-    const setReload = useFileStore.getState().setReload;
-    const resetSelected = useFileStore.getState().resetSelected;
-    const { closePopup, text } = get();
+function setMenuPos(value: MenuPosition) {
+  setState({ menuPos: value })
+}
 
-    try {
-      await invoke('rename_dir', {
-        dirPaths: selectedFiles,
-        newName: path + '/' + text,
-      });
-      closePopup();
-      setReload(!reload);
-      resetSelected();
-    } catch (err) {
-      console.error(err);
-    }
-  },
-  makeDir: async () => {
-    const path = useNavigationStore.getState().path;
-    const reload = useFileStore.getState().reload;
-    const setReload = useFileStore.getState().setReload;
-    const { closePopup, text } = get();
+function setShowDirMenu(value: boolean) {
+  setState({ showDirMenu: value })
+}
 
-    try {
-      await invoke('make_dir', { dirPath: path + '/' + text });
-      closePopup();
-      setReload(!reload);
-    } catch (err) {
-      console.error(err);
-    }
-  },
+function setIsOpen(value: boolean) {
+  setState({ isOpen: value })
+}
 
-  makeFile: async () => {
-    const path = useNavigationStore.getState().path;
-    const reload = useFileStore.getState().reload;
-    const setReload = useFileStore.getState().setReload;
-    const { closePopup, text } = get();
+function setText(value: string) {
+  setState({ text: value })
+}
 
-    try {
-      await invoke('make_file', { filePath: path + '/' + text });
-      closePopup();
-      setReload(!reload);
-    } catch (err) {
-      console.error(err);
-    }
-  },
-  pasteDir: async () => {
-    const path = useNavigationStore.getState().path;
-    const reload = useFileStore.getState().reload;
-    const setReload = useFileStore.getState().setReload;
-    const copySelected = useFileStore.getState().copySelected;
-    const setCopySelected = useFileStore.getState().setCopySelected;
-    const resetSelected = useFileStore.getState().resetSelected;
-    const setShowCopyProgress =
-      useCopyPopupStore.getState().setShowCopyProgress;
-    const setProgress = useCopyPopupStore.getState().setProgress;
+function setOnEnter(fn: () => void) {
+  setState({ onEnter: fn })
+}
 
-    setShowCopyProgress(true);
-    try {
-      await invoke('copy_items_to', {
-        dirPaths: copySelected,
-        targetPath: path,
-      });
-    } catch (error) {
-      console.log(error);
-    }
-    setReload(!reload);
-    resetSelected();
-    setShowCopyProgress(false);
-    setProgress(0);
-    setCopySelected([]);
+function openPopup() {
+  setState({ isOpen: true })
+}
+
+function closePopup() {
+  setState({ isOpen: false, text: '' })
+}
+
+function handleContextMenu(e: MouseEvent) {
+  e.preventDefault()
+  setState({ showMenu: true, menuPos: { x: e.pageX, y: e.pageY } })
+}
+
+async function handleRename() {
+  const nav = useNavigationStore()
+  const fil = useFileStore()
+  try {
+    await invoke('rename_dir', {
+      dirPaths: fil.selectedFiles,
+      newName: nav.path + '/' + state.text,
+    })
+    closePopup()
+    fil.setReload(!fil.reload)
+    fil.resetSelected()
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+async function makeDir() {
+  const nav = useNavigationStore()
+  const fil = useFileStore()
+  try {
+    await invoke('make_dir', { dirPath: nav.path + '/' + state.text })
+    closePopup()
+    fil.setReload(!fil.reload)
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+async function makeFile() {
+  const nav = useNavigationStore()
+  const fil = useFileStore()
+  try {
+    await invoke('make_file', { filePath: nav.path + '/' + state.text })
+    closePopup()
+    fil.setReload(!fil.reload)
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+async function pasteDir() {
+  const nav = useNavigationStore()
+  const fil = useFileStore()
+  const pop = usePopupControl()
+  const id = crypto.randomUUID()
+  pop.startCopy(id)
+  try {
+    await invoke('copy_items_to', {
+      dirPaths: fil.copySelected,
+      targetPath: nav.path,
+      copyId: id,
+    })
+  } catch (error) {
+    console.log(error)
+  }
+  pop.removeCopy(id)
+  fil.setReload(!fil.reload)
+  fil.resetSelected()
+  fil.setCopySelected([])
+}
+
+async function moveDir() {
+  const nav = useNavigationStore()
+  const fil = useFileStore()
+  try {
+    document.body.style.cursor = 'wait'
+    await invoke('move_items_to', {
+      dirPaths: fil.cutSelected,
+      targetPath: nav.workspaces[nav.actualWorkspace],
+    })
+  } catch (error) {
+    console.log(error)
+  } finally {
+    document.body.style.cursor = 'default'
+  }
+  fil.setReload(!fil.reload)
+  fil.resetSelected()
+  fil.setCopySelected([])
+}
+
+async function moveToTrash() {
+  const fil = useFileStore()
+  try {
+    await invoke('move_to_trash', { dirPath: fil.selectedFiles })
+    fil.resetSelected()
+    fil.setReload(!fil.reload)
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+async function deleteItems() {
+  const fil = useFileStore()
+  try {
+    await invoke('delete', { dirPath: fil.selectedFiles })
+    fil.resetSelected()
+    fil.setReload(!fil.reload)
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+export const useContextMenuStore = () => ({
+  get showMenu() {
+    return state.showMenu
   },
-  moveDir: async () => {
-    const actualWorkspace = useNavigationStore.getState().actualWorkspace;
-    const workspaces = useNavigationStore.getState().workspaces;
-    const reload = useFileStore.getState().reload;
-    const setReload = useFileStore.getState().setReload;
-    const cutSelected = useFileStore.getState().cutSelected;
-    const setCopySelected = useFileStore.getState().setCopySelected;
-    const resetSelected = useFileStore.getState().resetSelected;
-    try {
-      document.body.style.cursor = 'wait';
-      await invoke('move_items_to', {
-        dirPaths: cutSelected,
-        targetPath: workspaces[actualWorkspace],
-      });
-    } catch (error) {
-      console.log(error);
-      document.body.style.cursor = 'default';
-    } finally {
-      document.body.style.cursor = 'default';
-    }
-    setReload(!reload);
-    resetSelected();
-    setCopySelected([]);
+  get menuPos() {
+    return state.menuPos
   },
-  moveToTrash: async () => {
-    const reload = useFileStore.getState().reload;
-    const setReload = useFileStore.getState().setReload;
-    const resetSelected = useFileStore.getState().resetSelected;
-    const selectedFiles = useFileStore.getState().selectedFiles;
-    try {
-      await invoke('move_to_trash', { dirPath: selectedFiles });
-      resetSelected();
-      setReload(!reload);
-    } catch (err) {
-      console.error(err);
-    }
+  get showDirMenu() {
+    return state.showDirMenu
   },
-  delete: async () => {
-    const reload = useFileStore.getState().reload;
-    const setReload = useFileStore.getState().setReload;
-    const resetSelected = useFileStore.getState().resetSelected;
-    const selectedFiles = useFileStore.getState().selectedFiles;
-    try {
-      await invoke('delete', { dirPath: selectedFiles });
-      resetSelected();
-      setReload(!reload);
-    } catch (err) {
-      console.log(err);
-    }
+  get isOpen() {
+    return state.isOpen
   },
-}));
+  get text() {
+    return state.text
+  },
+  get onEnter() {
+    return state.onEnter
+  },
+  setShowMenu,
+  setMenuPos,
+  setShowDirMenu,
+  setIsOpen,
+  setText,
+  setOnEnter,
+  openPopup,
+  closePopup,
+  handleContextMenu,
+  handleRename,
+  makeDir,
+  makeFile,
+  pasteDir,
+  moveDir,
+  moveToTrash,
+  delete: deleteItems,
+})

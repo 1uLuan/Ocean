@@ -245,7 +245,7 @@ fn generate_unique_path(target_dir: &Path, file_name: &str) -> PathBuf {
 }
 
 #[tauri::command]
-async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: String) -> Result<(), String> {
+async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: String, copy_id: String) -> Result<(), String> {
     if dir_paths.is_empty() {
         return Err("Nenhum item para copiar".to_string());
     }
@@ -288,6 +288,7 @@ async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: Stri
         // Executar cópia em thread bloqueante
         let source_clone = source_path.clone();
         let target_clone = unique_target.to_string_lossy().to_string();
+        let id = copy_id.clone();
         
         tokio::task::spawn_blocking(move || {
             if source_clone.is_dir() {
@@ -303,6 +304,7 @@ async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: Stri
                     let _ = app_clone.emit(
                         "copy_progress",
                         serde_json::json!({
+                            "copy_id": id,
                             "current": current_index,
                             "file": file_name_owned,
                             "file_percent": file_progress,
@@ -334,6 +336,7 @@ async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: Stri
                     let _ = app_clone.emit(
                         "copy_progress",
                         serde_json::json!({
+                            "copy_id": id,
                             "current": current_index,
                             "file": file_name_owned,
                             "file_percent": file_progress,

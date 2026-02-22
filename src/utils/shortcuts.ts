@@ -101,13 +101,13 @@ export const SHORTCUTS: Record<ShortcutAction, Shortcut> = {
 
   // ========== ATALHOS COM BOTÕES DO MOUSE ==========
   go_back: {
-    mouseButton: 3, // Botão "Voltar" lateral do mouse
+    mouseButton: 3,
     description: 'Voltar (Botão lateral esquerdo do mouse)',
     action: 'go_back',
     type: 'mouse',
   },
   go_forward: {
-    mouseButton: 4, // Botão "Avançar" lateral do mouse
+    mouseButton: 4,
     description: 'Avançar (Botão lateral direito do mouse)',
     action: 'go_forward',
     type: 'mouse',
