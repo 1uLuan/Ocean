@@ -1,6 +1,7 @@
-import { onMount, onCleanup, createSignal } from 'solid-js'
+import { onMount, onCleanup, createSignal, createResource, Show } from 'solid-js'
 import { listen, UnlistenFn } from '@tauri-apps/api/event'
 import { X } from 'phosphor-solid'
+import { invoke } from '@tauri-apps/api/core'
 
 type TypeCopyProgress = {
   copy_id: string
@@ -20,9 +21,12 @@ type Props = {
 }
 
 export function CopyPopup(props: Props) {
-  const [progress, setProgress] = createSignal(0)
-  const [elapsed, setElapsed] = createSignal(0)
   const [file, setFile] = createSignal('')
+  const [progress, setProgress] = createSignal(0)
+  const [totalBytes, setTotalBytes] = createSignal(0)
+  const [copiedBytes, setCopiedBytes] = createSignal(0)
+  const [total, setTotal] = createSignal(0)
+  const [current, setCurrent] = createSignal(0)
 
   onMount(() => {
     let unlisten: UnlistenFn | undefined
@@ -30,38 +34,61 @@ export function CopyPopup(props: Props) {
     listen<TypeCopyProgress>('copy_progress', (event) => {
       const data = event.payload
       if (data.copy_id !== props.copyId) return
-      setProgress(data.file_percent)
-      setElapsed(data.elapsed_secs)
       setFile(data.file)
+      setProgress(data.file_percent)
+      setTotalBytes(data.total_bytes)
+      setCopiedBytes(data.copied_bytes)
+      setTotal(data.total)
+      setCurrent(data.current)
     }).then((fn) => (unlisten = fn))
 
     onCleanup(() => unlisten?.())
   })
 
+  const [formattedTotal] = createResource(totalBytes, (bytes: number) =>
+    invoke<string>('format_size', { bytes })
+  )
+  const [formattedCopied] = createResource(copiedBytes, (bytes: number) =>
+    invoke<string>('format_size', { bytes })
+  )
+
   return (
-    <div class="h-40 w-full rounded-md border border-[var(--border-secondary)] bg-[var(--bg-tertiary)] p-[4px]">
-      <div class="flex items-start justify-between">
-        <div class="w-auto rounded-[4px] border border-[var(--border-secondary)] bg-[var(--bg-secondary)] pr-2 pl-2 text-[12px]">
+    <div class="flex h-40 w-full shrink-0 flex-col rounded-md border border-[var(--border-secondary)] bg-[var(--bg-card)] p-1">
+      {/*top*/}
+      <div class="flex flex-row items-start justify-between">
+        <div class="w-8/12 truncate rounded-sm border border-[var(--border-secondary)] bg-[var(--bg-secondary)] pl-1 text-[0.75rem]">
           {file()}
         </div>
         <button
-          class="transition-color flex h-[26px] w-[26px] items-center justify-center rounded-md border border-[var(--border-secondary)] bg-[var(--bg-tertiary)] duration-200 hover:bg-red-700"
+          class="transition-color flex h-7 w-7 items-center justify-center rounded-sm border border-[var(--border-secondary)] duration-150 hover:bg-[var(--accent-danger)]"
           onClick={() => props.onCancel(props.copyId)}
         >
-          <X weight="light" size={14} />
+          <X weight="regular" size={14} />
         </button>
       </div>
-      <div class="flex h-[73%] flex-col justify-end-safe">
-        <div class="flex flex-row gap-10">
-          <div class="text-[11px]">{Math.floor(progress())}%</div>
-          <div class="text-[11px]">Tempo: {Math.floor(elapsed())}s</div>
+      {/*middle*/}
+      <div class="flex flex-row gap-2">
+        <Show when={total() > 1}>
+          <div class="pl-0.5 text-[0.70rem]">Current: {current()}</div>
+          <div class="pl-0.5 text-[0.70rem]">Total: {total()}</div>
+        </Show>
+      </div>
+      {/*bottom*/}
+      <div class="flex h-full w-full flex-col justify-end">
+        <div class="flex flex-row pl-1">
+          <div class="text-[0.75rem]">{Math.floor(progress())}%</div>
+          <div class="flex w-full flex-row justify-end">
+            <div class="mr-1 text-[0.75rem]">
+              {formattedCopied()} De {formattedTotal()}
+            </div>
+          </div>
         </div>
-        <div class="trasparent flex h-[6px] w-full gap-1 overflow-hidden">
+        <div class="trasparent flex h-1.5 w-full flex-row gap-0.5 overflow-hidden">
           <div
-            class="h-[100%] rounded-full bg-blue-500 transition-[width] ease-in-out"
+            class="h-full rounded-full bg-[var(--accent-glow)] transition-[width] ease-in-out"
             style={{ width: Math.floor(progress()) + '%' }}
           />
-          <div class="h-[100%] flex-1 rounded-full bg-red-500 transition-[width] ease-in-out" />
+          <div class="h-full flex-1 rounded-full bg-[var(--bg-primary)] transition-[width] ease-in-out" />
         </div>
       </div>
     </div>

@@ -7,17 +7,17 @@ type ConfigType = {
   title_bar: boolean
 }
 
+const defaultConfig: ConfigType = {
+  theme: 'light',
+  toggle_hidden_files: false,
+  title_bar: true,
+}
+
 type ConfigState = {
   config: ConfigType
   configIsOpen: boolean
   geralConfig: boolean
   themesConfig: boolean
-}
-
-const defaultConfig: ConfigType = {
-  theme: 'light',
-  toggle_hidden_files: false,
-  title_bar: true,
 }
 
 const [state, setState] = createStore<ConfigState>({

@@ -164,15 +164,15 @@ export function MainContent() {
 
   return (
     <Show when={!conf.configIsOpen}>
-      <div class="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-[var(--border-primary)] bg-[var(--bg-primary)]">
-        <div ref={headerRef!} class="overflow-hidden rounded-t-xl bg-[var(--bg-primary)]">
+      <div class="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--border-secondary)] bg-[var(--bg-primary)]">
+        <div ref={headerRef!} class="overflow-hidden rounded-t-lg bg-[var(--bg-primary)]">
           <div class="grid min-w-[600px] grid-cols-[minmax(200px,1fr)_100px_90px_90px] items-center text-[0.7rem] text-[var(--text-muted)]">
             <div class="pl-1.5">Nome</div>
             <div>Tipo</div>
             <div>Tamanho</div>
             <div>Modificado</div>
           </div>
-          <div class="h-[2px] w-screen bg-[var(--border-secondary)]" />
+          <div class="h-0.5 w-screen bg-[var(--border-secondary)]" />
         </div>
         <ul
           ref={(listEl) => setlistEl(listEl)}
@@ -207,9 +207,11 @@ export function MainContent() {
                     }
                   }}
                   onDblClick={() => {
-                    nav.goPath(file.path)
-                    fil.resetSelected()
-                    fil.resetInterval()
+                    if (file.ftype === 'Folder') {
+                      nav.goPath(file.path)
+                      fil.resetSelected()
+                      fil.resetInterval()
+                    }
                   }}
                 >
                   <div class="grid h-[30px] min-w-0 grid-cols-[28px_minmax(200px,1fr)_96px_84px_90px] items-center gap-1 pl-1">

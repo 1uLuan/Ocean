@@ -1,18 +1,23 @@
 import { ArrowLeft, ArrowRight, MagnifyingGlass, CaretRight, Gear } from 'phosphor-solid'
 import { useNavigationStore } from '@/stores/NavigationStore.ts'
 import { useConfigStore } from '@/stores/ConfigStore'
+import useSmoothScroll from '@/hooks/useSmoothScroll'
 import { Show, For } from 'solid-js'
 
 export function TopBar() {
   const nav = useNavigationStore()
   const conf = useConfigStore()
+
+  let listEl: HTMLDivElement | undefined
+  useSmoothScroll(() => listEl, { speed: 1.0, smoothness: 0.3 })
+
   return (
     <>
-      <div class="flex h-10 w-[100%] flex-row gap-0.5 p-[3px] pr-[3px] pl-[4px]">
+      <div class="flex h-10 w-full flex-row gap-0.5 p-[3px]">
         <button
           data-component="Button"
           type="button"
-          class="flex w-10 flex-row items-center justify-center rounded-xl hover:bg-[var(--bg-hover-primary)]"
+          class="flex w-10 flex-row items-center justify-center rounded-md hover:bg-[var(--bg-hover-secondary)]"
           onClick={() => nav.goBackPath()}
         >
           <ArrowLeft />
@@ -20,15 +25,15 @@ export function TopBar() {
         <button
           data-component="Button"
           type="button"
-          class="flex w-10 flex-row items-center justify-center rounded-xl hover:bg-[var(--bg-hover-primary)]"
+          class="flex w-10 flex-row items-center justify-center rounded-md hover:bg-[var(--bg-hover-secondary)]"
           onClick={() => nav.goNextPath()}
         >
           <ArrowRight />
         </button>
         <div class="flex w-full overflow-hidden">
           <div
-            data-content="Path-Visor"
-            class="scrollbar-none flex h-full w-full items-center overflow-x-scroll overflow-y-hidden rounded-tl-xl rounded-bl-xl bg-[var(--bg-tertiary)] pl-3 text-[0.9rem] whitespace-nowrap"
+            ref={listEl}
+            class="scrollbar-none flex h-full w-full items-center overflow-x-scroll overflow-y-hidden rounded-lg bg-[var(--bg-tertiary)] pl-3 text-[0.9rem] whitespace-nowrap"
           >
             <Show when={nav.path !== '/'} fallback={<span>/</span>}>
               <For each={nav.path.split('/').filter(Boolean)}>
@@ -45,12 +50,12 @@ export function TopBar() {
               </For>
             </Show>
           </div>
-          <button class="ml-auto flex w-10 flex-row items-center justify-center rounded-tr-xl rounded-br-xl bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover-primary)]">
-            <MagnifyingGlass />
-          </button>
         </div>
+        <button class="ml-auto flex w-10 flex-row items-center justify-center rounded-md hover:bg-[var(--bg-hover-secondary)]">
+          <MagnifyingGlass />
+        </button>
         <button
-          class="items center flex w-10 items-center justify-center rounded-full hover:bg-[var(--bg-hover-primary)]"
+          class="flex w-10 items-center justify-center rounded-md hover:bg-[var(--bg-hover-secondary)]"
           onClick={() => conf.toggleShowConfig(!conf.configIsOpen)}
         >
           <Gear weight="regular" />

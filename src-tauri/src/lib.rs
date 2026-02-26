@@ -193,14 +193,32 @@ async fn hunt_dir(app: tauri::AppHandle, dir_path: &str) -> Result<Vec<Fileinfo>
     Ok(list)
 }
 
-fn format_size(mut bytes: u64) -> String {
-    let units = ["B", "KB", "MB", "GB", "TB"];
+#[tauri::command]
+fn format_size(bytes: u64) -> String {
+    let units = ["B", "KiB", "MiB", "GiB", "TiB"];
+    
+    // Calcula a unidade maior
+    let mut value = bytes as f64;
     let mut i = 0;
-    while bytes >= 1024 && i < units.len() {
-        bytes /= 1024;
+    while value >= 1024.0 && i < units.len() - 1 {
+        value /= 1024.0;
         i += 1;
     }
-    format!("{:.2} {}", bytes, units[i]).to_string()
+    
+    // Pega o restante em bytes e calcula a unidade menor
+    let remainder_bytes = bytes % 1024u64.pow(i as u32);
+    let mut remainder = remainder_bytes as f64;
+    let mut j = 0;
+    while remainder >= 1024.0 && j < i {
+        remainder /= 1024.0;
+        j += 1;
+    }
+    
+    if remainder > 0.0 && j < i {
+        format!("{:.0},{}{}", value, remainder.trunc(), units[i])
+    } else {
+        format!("{:.2}{}", value, units[i])
+    }
 }
 
 #[tauri::command]
@@ -580,7 +598,9 @@ pub fn run() {
             open_terminal,
             move_items_to,
             get_path_name,
-            get_thumbnail_cached
+            get_thumbnail_cached,
+            format_size
+
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

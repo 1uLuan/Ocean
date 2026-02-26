@@ -1,7 +1,6 @@
 import '@/App.css'
 import '@/Themes.css'
-import { createEffect } from 'solid-js'
-
+import { createEffect, onMount, createSignal } from 'solid-js'
 //components
 import { NamePopup } from '@/components/NamePopup.tsx'
 import { TopBar } from '@/components/TopBar.tsx'
@@ -9,20 +8,22 @@ import { SideBar } from '@/components/SideBar.tsx'
 import { MainContent } from '@/components/MainContent.tsx'
 import { ContextMenu } from '@/components/ContextMenu.tsx'
 import { IconContext } from 'phosphor-solid'
-import { CopyPopup } from '@/components/CopyPopup.tsx'
 import { TitleBar } from '@/components/TitleBar'
 import { ConfigScreen } from '@/components/ConfigScreen'
 import { BottomBar } from '@/components/BottomBar'
 import { WarningPopup } from '@/components/WarningPopup'
 import { RightBar } from '@/components/RightBar'
-
 //stores
 import { useConfigStore } from '@/stores/ConfigStore'
+import { useContextMenuStore } from './stores/ContextMenuStore'
+import { usePopupControl } from './stores/PopupControl'
 //hooks
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts'
 
 function FileExplorer() {
   const conf = useConfigStore()
+  const cont = useContextMenuStore()
+  const pop = usePopupControl()
   createEffect(() => {
     {
       document.documentElement.setAttribute('data-theme', conf.config.theme)
@@ -31,6 +32,25 @@ function FileExplorer() {
 
   useKeyboardShortcuts()
 
+  onMount(() => {
+    function disableContextMenu(e: MouseEvent) {
+      return e.preventDefault()
+    }
+    window.addEventListener('contextmenu', disableContextMenu)
+    return () => window.removeEventListener('contextmenu', disableContextMenu)
+  })
+  onMount(() => {
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        cont.setShowMenu(false)
+        pop.setWarningPopup(false)
+        cont.closePopup()
+      }
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  })
+
   return (
     <main class="flex h-screen flex-col bg-[var(--bg-secondary)] text-[var(--text-primary)]">
       <IconContext.Provider value={{ size: 16, color: 'var(--text-primary)', weight: `bold` }}>
@@ -38,7 +58,7 @@ function FileExplorer() {
           <TitleBar />
           <TopBar />
         </div>
-        <div data-info="horizontal flex" class="flex flex-1 flex-row overflow-hidden">
+        <div class="flex flex-1 flex-row overflow-hidden">
           <SideBar />
           <MainContent />
           <ConfigScreen />
