@@ -18,6 +18,7 @@ type ConfigState = {
   configIsOpen: boolean
   geralConfig: boolean
   themesConfig: boolean
+  workspaceActive: boolean
 }
 
 const [state, setState] = createStore<ConfigState>({
@@ -25,6 +26,7 @@ const [state, setState] = createStore<ConfigState>({
   configIsOpen: false,
   geralConfig: false,
   themesConfig: false,
+  workspaceActive: false,
 })
 
 invoke<ConfigType>('load_config')
@@ -66,6 +68,10 @@ function changeTheme(theme: string) {
   saveConfig()
 }
 
+function toggleWorkspaceActive(value: boolean) {
+  setState('workspaceActive', value)
+}
+
 export const useConfigStore = () => ({
   get config() {
     return state.config
@@ -79,6 +85,9 @@ export const useConfigStore = () => ({
   get themesConfig() {
     return state.themesConfig
   },
+  get workspaceActive() {
+    return state.workspaceActive
+  },
   setConfig,
   toggleShowConfig,
   setGeralConfig,
@@ -87,4 +96,5 @@ export const useConfigStore = () => ({
   toggleHiddenFiles,
   toggleTitleBar,
   changeTheme,
+  toggleWorkspaceActive,
 })

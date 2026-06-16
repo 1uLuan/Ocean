@@ -1,6 +1,6 @@
 import '@/App.css'
 import '@/Themes.css'
-import { createEffect, onMount, createSignal } from 'solid-js'
+import { createEffect, onMount, Show } from 'solid-js'
 //components
 import { NamePopup } from '@/components/NamePopup.tsx'
 import { TopBar } from '@/components/TopBar.tsx'
@@ -12,18 +12,21 @@ import { TitleBar } from '@/components/TitleBar'
 import { ConfigScreen } from '@/components/ConfigScreen'
 import { BottomBar } from '@/components/BottomBar'
 import { WarningPopup } from '@/components/WarningPopup'
-import { RightBar } from '@/components/RightBar'
+import { WorkspaceBar } from '@/components/WorkspaceBar'
 //stores
 import { useConfigStore } from '@/stores/ConfigStore'
 import { useContextMenuStore } from './stores/ContextMenuStore'
 import { usePopupControl } from './stores/PopupControl'
+import { useNavigationStore } from './stores/NavigationStore'
 //hooks
 import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts'
+import { invoke } from '@tauri-apps/api/core'
 
 function FileExplorer() {
   const conf = useConfigStore()
   const cont = useContextMenuStore()
   const pop = usePopupControl()
+  const nav = useNavigationStore()
   createEffect(() => {
     {
       document.documentElement.setAttribute('data-theme', conf.config.theme)
@@ -51,19 +54,33 @@ function FileExplorer() {
     return () => window.removeEventListener('keydown', handleEsc)
   })
 
+  onMount(() => {
+    invoke<string>('get_home').then((homePath) => {
+      nav.setHome(homePath)
+      nav.setWorkspacePath(0)
+    })
+  })
+
   return (
     <main class="flex h-screen flex-col bg-[var(--bg-secondary)] text-[var(--text-primary)]">
       <IconContext.Provider value={{ size: 16, color: 'var(--text-primary)', weight: `bold` }}>
-        <div data-info="vertical flex" class="flex flex-none flex-col">
+        <div class="flex flex-none flex-col">
           <TitleBar />
           <TopBar />
+          <div class="h-px w-full shrink-0 bg-[var(--border-primary)]" /> {/*Divisor */}
         </div>
-        <div class="flex flex-1 flex-row overflow-hidden">
+        <div class="flex h-full w-full flex-row overflow-hidden">
           <SideBar />
-          <MainContent />
+          <div class="h-full w-px shrink-0 bg-[var(--border-primary)]" /> {/*Divisor */}
           <ConfigScreen />
-          <RightBar />
+          <div class="flex h-full w-full flex-col overflow-hidden">
+            <Show when={conf.workspaceActive}>
+              <WorkspaceBar />
+            </Show>
+            <MainContent />
+          </div>
         </div>
+        <div class="h-px w-full shrink-0 bg-[var(--border-primary)]" /> {/*Divisor */}
         <BottomBar />
         <ContextMenu />
         <NamePopup />

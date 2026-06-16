@@ -31,9 +31,9 @@ export function ConfigScreen() {
 
   return (
     <Show when={conf.configIsOpen}>
-      <div class="flex h-full w-full flex-col rounded-lg">
+      <div class="absolute flex h-full w-full flex-col">
         <div class="flex h-full flex-row">
-          <div class="w-autos h-full rounded-l-lg border-t border-b border-l border-[var(--border-secondary)] bg-[var(--bg-primary)] p-2">
+          <div class="w-autos h-full border-t border-b border-l border-[var(--border-secondary)] bg-[var(--bg-primary)] p-2">
             <For each={Object.entries(configButtons)}>
               {([name, [category, action]]) => (
                 <button
@@ -47,7 +47,7 @@ export function ConfigScreen() {
               )}
             </For>
           </div>
-          <div class="relative flex h-full w-full flex-col overflow-hidden rounded-r-lg border border-[var(--border-secondary)] bg-[var(--bg-secondary)] pt-3 pl-1 text-[0.9rem]">
+          <div class="relative flex h-full w-full flex-col overflow-hidden border border-[var(--border-secondary)] bg-[var(--bg-secondary)] pt-3 pl-1 text-[0.9rem]">
             <div
               aria-hidden={activeCategory() !== 'geral'}
               class={`absolute inset-0 p-3 transition-[opacity,position.y] duration-200 ease-in-out ${

@@ -13,7 +13,7 @@ export function TopBar() {
 
   return (
     <>
-      <div class="flex h-10 w-full flex-row gap-0.5 p-[3px]">
+      <div class="flex h-10 w-full flex-row gap-0.5 p-0.5">
         <button
           data-component="Button"
           type="button"

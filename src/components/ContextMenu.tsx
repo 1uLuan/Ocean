@@ -1,4 +1,4 @@
-import { createEffect, onMount, For, Show, createMemo } from 'solid-js'
+import { For, Show, createMemo } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import { useContextMenuStore } from '../stores/ContextMenuStore.ts'
 import { useConfigStore } from '../stores/ConfigStore.ts'

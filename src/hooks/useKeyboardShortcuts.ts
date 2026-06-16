@@ -11,11 +11,13 @@ import {
 import { useNavigationStore } from '@/stores/NavigationStore'
 import { useFileStore } from '@/stores/FileStore'
 import { useContextMenuStore } from '@/stores/ContextMenuStore'
+import { useConfigStore } from '@/stores/ConfigStore'
 
 export function useKeyboardShortcuts() {
   const fil = useFileStore()
   const cont = useContextMenuStore()
   const nav = useNavigationStore()
+  const conf = useConfigStore()
 
   onMount(() => {
     // ========== EXECUTAR AÇÃO DO ATALHO ==========
@@ -63,16 +65,28 @@ export function useKeyboardShortcuts() {
           nav.setActualWorkspace(3)
           fil.setReload(!fil.reload)
           break
+        case 'add_workspace':
+          nav.addWorkspace()
+          if (nav.workspaceCount === 2) {
+            conf.toggleWorkspaceActive(true)
+          }
+          break
+        case 'remove_workspace':
+          nav.removeWorkspace(nav.actualWorkspace)
+          if (nav.workspaceCount === 1) {
+            conf.toggleWorkspaceActive(false)
+          }
+          break
 
         // ========== SCROLL WORKSPACES ==========
         case 'next_workspace': {
-          const next = ((nav.actualWorkspace + 1) % 4) as 0 | 1 | 2 | 3
+          const next = (nav.actualWorkspace + 1) % nav.workspaceCount
           nav.setActualWorkspace(next)
           fil.setReload(!fil.reload)
           break
         }
         case 'prev_workspace': {
-          const prev = ((nav.actualWorkspace - 1 + 4) % 4) as 0 | 1 | 2 | 3
+          const prev = (nav.actualWorkspace - 1 + nav.workspaceCount) % nav.workspaceCount
           nav.setActualWorkspace(prev)
           fil.setReload(!fil.reload)
           break

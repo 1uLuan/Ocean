@@ -24,7 +24,7 @@ export function ThumbnailImage(props: ThumbnailImageProps) {
 
   createEffect(() => {
     const filePath = props.filePath
-    const size = props.size ?? 28
+    const size = props.size ?? 38
     let cancelled = false
 
     const cached = thumbnailCache.get(filePath)
@@ -68,16 +68,16 @@ export function ThumbnailImage(props: ThumbnailImageProps) {
     <img
       src={thumbnail() ?? icons.Image}
       alt={props.alt}
-      width={props.size ?? 28}
-      height={props.size ?? 28}
+      width={props.size ?? 38}
+      height={props.size ?? 38}
       decoding="async"
       loading="lazy"
       class="object-contain"
       style={{
-        'max-width': `${props.size ?? 28}px`,
-        'max-height': `${props.size ?? 28}px`,
-        'min-width': `${props.size ?? 28}px`,
-        'min-height': `${props.size ?? 28}px`,
+        'max-width': `${props.size ?? 38}px`,
+        'max-height': `${props.size ?? 38}px`,
+        'min-width': `${props.size ?? 38}px`,
+        'min-height': `${props.size ?? 38}px`,
       }}
       onError={(e) => {
         e.currentTarget.src = icons.Image
@@ -95,7 +95,9 @@ export function MainContent() {
 
   createEffect(() => {
     const reload = fil.reload
+    reload
     const workspace = nav.workspaces[nav.actualWorkspace]
+    workspace
 
     fil.setIsLoading(true)
     document.body.style.cursor = 'wait'
@@ -110,16 +112,6 @@ export function MainContent() {
         fil.setIsLoading(false)
         document.body.style.cursor = 'default'
       })
-  })
-
-  onMount(() => {
-    invoke<string>('get_home').then((homePath) => {
-      nav.setHome(homePath)
-      nav.setWorkspacePath(0)
-      nav.setWorkspacePath(1)
-      nav.setWorkspacePath(2)
-      nav.setWorkspacePath(3)
-    })
   })
 
   const [altPressed, setAltPressed] = createSignal(false)
@@ -148,8 +140,8 @@ export function MainContent() {
 
     // Scroll rápido e responsivo
     useSmoothScroll(() => el!, {
-      speed: 1.2,
-      smoothness: 0.3,
+      speed: 1.0,
+      smoothness: 0.2,
       lock: altPressed,
     })
 
@@ -164,16 +156,17 @@ export function MainContent() {
 
   return (
     <Show when={!conf.configIsOpen}>
-      <div class="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--border-secondary)] bg-[var(--bg-primary)]">
-        <div ref={headerRef!} class="overflow-hidden rounded-t-lg bg-[var(--bg-primary)]">
-          <div class="grid min-w-[600px] grid-cols-[minmax(200px,1fr)_100px_90px_90px] items-center text-[0.7rem] text-[var(--text-muted)]">
-            <div class="pl-1.5">Nome</div>
-            <div>Tipo</div>
-            <div>Tamanho</div>
-            <div>Modificado</div>
-          </div>
-          <div class="h-0.5 w-screen bg-[var(--border-secondary)]" />
+      <div class="flex h-full min-h-0 w-full min-w-0 flex-col bg-[var(--bg-primary)]">
+        <div
+          ref={headerRef!}
+          class="grid h-8 min-w-[600px] grid-cols-[minmax(200px,1fr)_100px_90px_90px] items-center text-[0.7rem] text-[var(--text-muted)]"
+        >
+          <div class="pl-1.5">Nome</div>
+          <div>Tipo</div>
+          <div>Tamanho</div>
+          <div>Modificado</div>
         </div>
+        <div class="h-px w-full shrink-0 bg-[var(--border-secondary)]" />
         <ul
           ref={(listEl) => setlistEl(listEl)}
           class="flex h-full w-full min-w-0 list-none flex-col overflow-scroll"
@@ -214,16 +207,18 @@ export function MainContent() {
                     }
                   }}
                 >
-                  <div class="grid h-[30px] min-w-0 grid-cols-[28px_minmax(200px,1fr)_96px_84px_90px] items-center gap-1 pl-1">
+                  <div class="grid h-[38px] min-w-0 grid-cols-[38px_minmax(200px,1fr)_96px_84px_90px] items-center gap-0.5 pl-1">
                     <Show
                       when={file.ftype === 'Image'}
                       fallback={
-                        <img src={icons[file.ftype]} alt={file.ftype} height={28} width={28} />
+                        <img src={icons[file.ftype]} alt={file.ftype} height={38} width={38} />
                       }
                     >
                       <ThumbnailImage filePath={file.path} alt={file.ftype} />
                     </Show>
-                    <div class="overflow-hidden text-ellipsis whitespace-nowrap">{file.name}</div>
+                    <div class="ml-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                      {file.name}
+                    </div>
                     <div class="overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-secondary)]">
                       {file.ftype}
                     </div>

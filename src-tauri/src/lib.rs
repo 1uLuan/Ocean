@@ -1,20 +1,20 @@
+use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Local};
+use fs_extra::dir::{CopyOptions, TransitProcessResult};
+use image::{codecs::jpeg::JpegEncoder, ImageReader};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::env;
-use std::fs::{File,create_dir_all, read_dir, read_to_string,metadata, rename, write};
-use fs_extra::dir::{TransitProcessResult,CopyOptions};
-use std::path::{Path, PathBuf};
-use std::time::SystemTime;
-use trash::delete_all;
-use tauri::{AppHandle,Manager,Emitter};
-use std::time::Instant;
-use tauri_plugin_shell::ShellExt;
-use std::sync::atomic::{AtomicBool, Ordering};
-use tokio;
+use std::fs::{create_dir_all, metadata, read_dir, read_to_string, rename, write, File};
 use std::io::ErrorKind;
-use image::{ImageReader,codecs::jpeg::JpegEncoder};
-use sha2::{Sha256, Digest};
-use base64::{Engine as _, engine::general_purpose};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Instant;
+use std::time::SystemTime;
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_shell::ShellExt;
+use tokio;
+use trash::delete_all;
 
 static CANCEL_FUNC: AtomicBool = AtomicBool::new(false);
 
@@ -74,6 +74,7 @@ fn get_home() -> String {
 }
 
 #[tauri::command]
+faça Commit!
 fn save_config(app: tauri::AppHandle, config: Config) -> Result<(), String> {
     // Resolva o diretório correto do SO para configs do app
     let dir = app
@@ -196,7 +197,7 @@ async fn hunt_dir(app: tauri::AppHandle, dir_path: &str) -> Result<Vec<Fileinfo>
 #[tauri::command]
 fn format_size(bytes: u64) -> String {
     let units = ["B", "KiB", "MiB", "GiB", "TiB"];
-    
+
     // Calcula a unidade maior
     let mut value = bytes as f64;
     let mut i = 0;
@@ -204,7 +205,7 @@ fn format_size(bytes: u64) -> String {
         value /= 1024.0;
         i += 1;
     }
-    
+
     // Pega o restante em bytes e calcula a unidade menor
     let remainder_bytes = bytes % 1024u64.pow(i as u32);
     let mut remainder = remainder_bytes as f64;
@@ -213,7 +214,7 @@ fn format_size(bytes: u64) -> String {
         remainder /= 1024.0;
         j += 1;
     }
-    
+
     if remainder > 0.0 && j < i {
         format!("{:.0},{}{}", value, remainder.trunc(), units[i])
     } else {
@@ -234,7 +235,7 @@ fn make_dir(dir_path: &str) -> Result<(), String> {
     Ok(())
 }
 #[tauri::command]
-fn make_file(file_path: &str) -> Result<(), String> { 
+fn make_file(file_path: &str) -> Result<(), String> {
     File::create(file_path).map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -246,7 +247,10 @@ fn generate_unique_path(target_dir: &Path, file_name: &str) -> PathBuf {
     while unique_target.exists() {
         // Separar nome e extensão
         let path = Path::new(file_name);
-        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or(file_name);
+        let stem = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or(file_name);
         let extension = path.extension().and_then(|e| e.to_str());
 
         let new_name = if let Some(ext) = extension {
@@ -263,7 +267,12 @@ fn generate_unique_path(target_dir: &Path, file_name: &str) -> PathBuf {
 }
 
 #[tauri::command]
-async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: String, copy_id: String) -> Result<(), String> {
+async fn copy_items_to(
+    app: AppHandle,
+    dir_paths: Vec<String>,
+    target_path: String,
+    copy_id: String,
+) -> Result<(), String> {
     if dir_paths.is_empty() {
         return Err("Nenhum item para copiar".to_string());
     }
@@ -289,7 +298,7 @@ async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: Stri
             .and_then(|name| name.to_str())
             .ok_or_else(|| format!("Nome de arquivo inválido: {}", dir_path))?;
         let unique_target = generate_unique_path(target_dir, file_name);
-        
+
         let mut options_dir = fs_extra::dir::CopyOptions::new();
         options_dir.copy_inside = true;
         options_dir.overwrite = false;
@@ -297,7 +306,6 @@ async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: Stri
         let mut options_file = fs_extra::file::CopyOptions::new();
         options_file.overwrite = false;
 
-        
         // Função de callback de progresso
         let app_clone = app.clone();
         let file_name_owned = file_name.to_string();
@@ -307,7 +315,7 @@ async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: Stri
         let source_clone = source_path.clone();
         let target_clone = unique_target.to_string_lossy().to_string();
         let id = copy_id.clone();
-        
+
         tokio::task::spawn_blocking(move || {
             if source_clone.is_dir() {
                 let callback_dir = move |tp: fs_extra::dir::TransitProcess| {
@@ -332,7 +340,7 @@ async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: Stri
                             "total_bytes": tp.total_bytes,
                         }),
                     );
-    
+
                     TransitProcessResult::ContinueOrAbort
                 };
                 fs_extra::dir::copy_with_progress(
@@ -364,7 +372,6 @@ async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: Stri
                             "total_bytes": tp.total_bytes,
                         }),
                     );
-                    
                 };
                 fs_extra::file::copy_with_progress(
                     source_clone,
@@ -385,14 +392,19 @@ async fn copy_items_to(app: AppHandle, dir_paths: Vec<String>, target_path: Stri
 }
 
 #[tauri::command]
-async fn move_items_to(_app: tauri::AppHandle, dir_paths: Vec<String>, target_path: String) -> Result<(), String> {
+async fn move_items_to(
+    _app: tauri::AppHandle,
+    dir_paths: Vec<String>,
+    target_path: String,
+) -> Result<(), String> {
     for path_str in dir_paths {
         let src_path = Path::new(&path_str);
-        
+
         // Extrai apenas o nome do arquivo/pasta (ex: "foto.jpg")
-        let file_name = src_path.file_name()
+        let file_name = src_path
+            .file_name()
             .ok_or_else(|| format!("Caminho inválido: {}", path_str))?;
-        
+
         // Constrói o caminho de destino corretamente usando PathBuf
         let mut dest_path = PathBuf::from(&target_path);
         dest_path.push(file_name);
@@ -400,7 +412,7 @@ async fn move_items_to(_app: tauri::AppHandle, dir_paths: Vec<String>, target_pa
         // 1. Tenta o Rename (Operação Atômica e Rápida)
         match rename(&src_path, &dest_path) {
             Ok(_) => println!("Movido via metadados: {:?}", file_name),
-            
+
             // 2. Fallback para Cross-Device (Discos diferentes)
             Err(e) if e.kind() == ErrorKind::CrossesDevices || e.raw_os_error() == Some(18) => {
                 let target_dir = Path::new(&target_path);
@@ -427,7 +439,7 @@ async fn move_items_to(_app: tauri::AppHandle, dir_paths: Vec<String>, target_pa
                 .map_err(|e| format!("Erro de concorrência: {}", e))?
                 .map_err(|e| format!("Erro ao mover fisicamente: {}", e))?;
             }
-            
+
             Err(e) => return Err(format!("Erro ao mover {:?}: {}", file_name, e)),
         }
     }
@@ -450,14 +462,15 @@ async fn delete(dir_path: Vec<String>) -> Result<(), String> {
     use tokio::fs;
 
     for path in dir_path {
-        let metadata = fs::metadata(&path).await.map_err(|e| format!("failed to read metadata from {}. Err: {}",path, e))?;
+        let metadata = fs::metadata(&path)
+            .await
+            .map_err(|e| format!("failed to read metadata from {}. Err: {}", path, e))?;
         if metadata.is_dir() {
             fs::remove_dir_all(&path).await
-        }
-        else {
+        } else {
             fs::remove_file(&path).await
         }
-        .map_err(|e| format!("failed to delete {}. Err: {}",path, e))?;
+        .map_err(|e| format!("failed to delete {}. Err: {}", path, e))?;
     }
     Ok(())
 }
@@ -484,7 +497,6 @@ fn rename_dir(dir_paths: Vec<String>, new_name: &str) -> Result<(), String> {
 }
 #[tauri::command]
 async fn open_terminal(app: tauri::AppHandle, path: String) -> Result<(), String> {
-
     #[cfg(target_os = "linux")]
     {
         app.shell()
@@ -501,7 +513,7 @@ fn get_cache_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
         .join("ocean")
         .join("thumbnails");
-    
+
     create_dir_all(&cache).ok();
     cache
 }
@@ -519,26 +531,21 @@ async fn get_thumbnail_cached(path: String, max_size: u32) -> Result<String, Str
         .extension()
         .and_then(|s| s.to_str())
         .unwrap_or("");
-    
+
     if extension.to_lowercase() == "svg" {
-        let svg_content = std::fs::read_to_string(&path)
-            .map_err(|e| e.to_string())?;
+        let svg_content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
         let encoded = general_purpose::STANDARD.encode(svg_content.as_bytes());
         return Ok(format!("data:image/svg+xml;base64,{}", encoded));
-    }   
-    
+    }
+
     let cache_dir = get_cache_dir();
     let cache_name = path_to_cache_name(&path);
     let cache_path = cache_dir.join(&cache_name);
 
     // Verifica se thumbnail existe E está atualizada
     if cache_path.exists() {
-        let original_modified = metadata(&path)
-            .and_then(|m| m.modified())
-            .ok();
-        let cache_modified = metadata(&cache_path)
-            .and_then(|m| m.modified())
-            .ok();
+        let original_modified = metadata(&path).and_then(|m| m.modified()).ok();
+        let cache_modified = metadata(&cache_path).and_then(|m| m.modified()).ok();
 
         // Se thumbnail é mais recente que o arquivo original, retorna o caminho
         if let (Some(orig), Some(cache)) = (original_modified, cache_modified) {
@@ -551,7 +558,7 @@ async fn get_thumbnail_cached(path: String, max_size: u32) -> Result<String, Str
     // Gera thumbnail em thread separada
     let path_clone = path.clone();
     let cache_path_clone = cache_path.clone();
-    
+
     tokio::task::spawn_blocking(move || {
         let img = ImageReader::open(&path_clone)
             .map_err(|e| e.to_string())?
@@ -563,9 +570,8 @@ async fn get_thumbnail_cached(path: String, max_size: u32) -> Result<String, Str
         let thumb = img.thumbnail(max_size, max_size);
         let rgb = thumb.into_rgb8();
 
-        let file = File::create(&cache_path_clone)
-            .map_err(|e| e.to_string())?;
-        
+        let file = File::create(&cache_path_clone).map_err(|e| e.to_string())?;
+
         JpegEncoder::new_with_quality(file, 75)
             .encode_image(&rgb)
             .map_err(|e| e.to_string())?;
@@ -600,7 +606,6 @@ pub fn run() {
             get_path_name,
             get_thumbnail_cached,
             format_size
-
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
