@@ -17,6 +17,7 @@ export function NamePopup() {
             onKeyDown={(k) => {
               if (k.key === 'Enter') {
                 cont.onEnter?.()
+                cont.closePopup()
               }
             }}
           ></textarea>

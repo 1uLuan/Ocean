@@ -20,6 +20,8 @@ pub fn run() {
             management::rename_dir,
             management::move_to_trash,
             management::delete,
+            management::compress_to_zip,
+            management::extract_zip,
             configuration::load_config,
             configuration::save_config,
             utils::get_home,

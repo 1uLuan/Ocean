@@ -17,6 +17,8 @@ import {
   EyeSlash,
   Scissors,
   File,
+  ArchiveBox,
+  Archive,
 } from 'phosphor-solid'
 
 export function ContextMenu() {
@@ -118,6 +120,25 @@ export function ContextMenu() {
         } catch (error) {
           console.log(error)
         }
+      },
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: false,
+    },
+    {
+      label: 'Compress To .Zip',
+      icon: <ArchiveBox weight="regular" />,
+      onClick: () => {
+        cont.setOnEnter(cont.compressToZip)
+        cont.openPopup()
+      },
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: false,
+    },
+    {
+      label: 'Extract Zip Here',
+      icon: <Archive weight="regular" />,
+      onClick: () => {
+        cont.extractZip()
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,

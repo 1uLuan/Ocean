@@ -5,15 +5,32 @@ import { useFileStore } from '@/stores/FileStore'
 type PopupControl = {
   warningPopup: boolean
   copies: string[]
+  compressions: string[]
 }
 
 const [state, setState] = createStore<PopupControl>({
   warningPopup: false,
   copies: [],
+  compressions: [],
 })
 
 function setWarningPopup(value: boolean) {
   setState('warningPopup', value)
+}
+
+function startCompress(id: string) {
+  setState('compressions', (prev) => [...prev, id])
+}
+
+function removeCompress(id: string) {
+  setState('compressions', (prev) => prev.filter((c) => c !== id))
+}
+
+async function cancelCompress(id: string) {
+  const fil = useFileStore()
+  await invoke('cancel_func')
+  removeCompress(id)
+  fil.setReload(!fil.reload)
 }
 
 function startCopy(id: string) {
@@ -38,8 +55,14 @@ export const usePopupControl = () => ({
   get copies() {
     return state.copies
   },
+  get compressions() {
+    return state.compressions
+  },
   setWarningPopup,
   startCopy,
   cancelCopy,
   removeCopy,
+  startCompress,
+  removeCompress,
+  cancelCompress,
 })

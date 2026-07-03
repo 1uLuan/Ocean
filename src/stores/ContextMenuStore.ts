@@ -4,6 +4,10 @@ import { useNavigationStore } from '@/stores/NavigationStore'
 import { useFileStore } from '@/stores/FileStore'
 import { usePopupControl } from '@/stores/PopupControl'
 
+const nav = useNavigationStore()
+const fil = useFileStore()
+const pop = usePopupControl()
+
 type MenuPosition = { x: number; y: number } | null
 
 type MenuState = {
@@ -62,14 +66,11 @@ function handleContextMenu(e: MouseEvent) {
 }
 
 async function handleRename() {
-  const nav = useNavigationStore()
-  const fil = useFileStore()
   try {
     await invoke('rename_dir', {
       dirPaths: fil.selectedFiles,
       newName: nav.path + '/' + state.text,
     })
-    closePopup()
     fil.setReload(!fil.reload)
     fil.resetSelected()
   } catch (err) {
@@ -78,11 +79,8 @@ async function handleRename() {
 }
 
 async function makeDir() {
-  const nav = useNavigationStore()
-  const fil = useFileStore()
   try {
     await invoke('make_dir', { dirPath: nav.path + '/' + state.text })
-    closePopup()
     fil.setReload(!fil.reload)
   } catch (err) {
     console.error(err)
@@ -90,11 +88,8 @@ async function makeDir() {
 }
 
 async function makeFile() {
-  const nav = useNavigationStore()
-  const fil = useFileStore()
   try {
     await invoke('make_file', { filePath: nav.path + '/' + state.text })
-    closePopup()
     fil.setReload(!fil.reload)
   } catch (err) {
     console.error(err)
@@ -102,9 +97,6 @@ async function makeFile() {
 }
 
 async function pasteDir() {
-  const nav = useNavigationStore()
-  const fil = useFileStore()
-  const pop = usePopupControl()
   const id = crypto.randomUUID()
   pop.startCopy(id)
   try {
@@ -118,13 +110,11 @@ async function pasteDir() {
   }
   pop.removeCopy(id)
   fil.setReload(!fil.reload)
-  fil.resetSelected()
+  //fil.resetSelected()
   fil.setCopySelected([])
 }
 
 async function moveDir() {
-  const nav = useNavigationStore()
-  const fil = useFileStore()
   try {
     document.body.style.cursor = 'wait'
     await invoke('move_items_to', {
@@ -137,12 +127,11 @@ async function moveDir() {
     document.body.style.cursor = 'default'
   }
   fil.setReload(!fil.reload)
-  fil.resetSelected()
+  //fil.resetSelected()
   fil.setCopySelected([])
 }
 
 async function moveToTrash() {
-  const fil = useFileStore()
   try {
     await invoke('move_to_trash', { dirPath: fil.selectedFiles })
     fil.resetSelected()
@@ -153,7 +142,6 @@ async function moveToTrash() {
 }
 
 async function deleteItems() {
-  const fil = useFileStore()
   try {
     await invoke('delete', { dirPath: fil.selectedFiles })
     fil.resetSelected()
@@ -161,6 +149,43 @@ async function deleteItems() {
   } catch (err) {
     console.log(err)
   }
+}
+
+async function compressToZip() {
+  const id = crypto.randomUUID()
+  pop.startCompress(id)
+
+  try {
+    await invoke('compress_to_zip', {
+      filePaths: fil.selectedFiles,
+      outputPath: nav.workspaces[nav.actualWorkspace] + '/' + state.text + '.zip',
+      opId: id,
+    })
+  } catch (error) {
+    console.log(error)
+  }
+  pop.removeCompress(id)
+  fil.setReload(!fil.reload)
+  fil.resetSelected()
+}
+
+async function extractZip() {
+  const id = crypto.randomUUID()
+  pop.startCompress(id)
+
+  try {
+    await invoke('extract_zip', {
+      zipPaths: fil.selectedFiles,
+      outputPath: nav.workspaces[nav.actualWorkspace],
+      opId: id,
+    })
+    fil.setReload(!fil.reload)
+  } catch (error) {
+    console.log(error)
+  }
+  pop.removeCompress(id)
+  fil.setReload(!fil.reload)
+  fil.resetSelected()
 }
 
 export const useContextMenuStore = () => ({
@@ -198,4 +223,6 @@ export const useContextMenuStore = () => ({
   moveDir,
   moveToTrash,
   delete: deleteItems,
+  compressToZip,
+  extractZip,
 })
