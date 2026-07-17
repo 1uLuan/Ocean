@@ -56,6 +56,19 @@ function openPopup() {
   setState({ isOpen: true })
 }
 
+function openRenamePopup() {
+  const fil = useFileStore()
+
+  if (fil.selectedFiles.length === 1) {
+    const fullPath = fil.selectedFiles[0]
+    const name = fullPath.split(/[/\\]/).pop() ?? ''
+    setText(name)
+  }
+
+  setOnEnter(handleRename)
+  openPopup()
+}
+
 function closePopup() {
   setState({ isOpen: false, text: '' })
 }
@@ -66,6 +79,9 @@ function handleContextMenu(e: MouseEvent) {
 }
 
 async function handleRename() {
+  if (fil.selectedFiles.length === 1) {
+    state.text = fil.selectedFiles[0]
+  }
   try {
     await invoke('rename_dir', {
       dirPaths: fil.selectedFiles,
@@ -79,8 +95,13 @@ async function handleRename() {
 }
 
 async function makeDir() {
+  const path =
+    fil.files.find(f => f.path === fil.selectedFiles[0])?.ftype === "folder"
+      ? fil.selectedFiles[0]
+      : nav.path
+
   try {
-    await invoke('make_dir', { dirPath: nav.path + '/' + state.text })
+    await invoke('make_dir', { dirPath: path + '/' + state.text })
     fil.setReload(!fil.reload)
   } catch (err) {
     console.error(err)
@@ -88,8 +109,13 @@ async function makeDir() {
 }
 
 async function makeFile() {
+  const path =
+    fil.files.find(f => f.path === fil.selectedFiles[0])?.ftype === "folder"
+      ? fil.selectedFiles[0]
+      : nav.path
+
   try {
-    await invoke('make_file', { filePath: nav.path + '/' + state.text })
+    await invoke('make_file', { filePath: path + '/' + state.text })
     fil.setReload(!fil.reload)
   } catch (err) {
     console.error(err)
@@ -111,7 +137,7 @@ async function pasteDir() {
   pop.removeCopy(id)
   fil.setReload(!fil.reload)
   //fil.resetSelected()
-  fil.setCopySelected([])
+  //fil.setCopySelected([])
 }
 
 async function moveDir() {
@@ -128,12 +154,12 @@ async function moveDir() {
   }
   fil.setReload(!fil.reload)
   //fil.resetSelected()
-  fil.setCopySelected([])
+  //fil.setCopySelected([])
 }
 
 async function moveToTrash() {
   try {
-    await invoke('move_to_trash', { dirPath: fil.selectedFiles })
+    await invoke('move_to_trash', { dirPaths: fil.selectedFiles })
     fil.resetSelected()
     fil.setReload(!fil.reload)
   } catch (err) {
@@ -214,6 +240,7 @@ export const useContextMenuStore = () => ({
   setText,
   setOnEnter,
   openPopup,
+  openRenamePopup,
   closePopup,
   handleContextMenu,
   handleRename,

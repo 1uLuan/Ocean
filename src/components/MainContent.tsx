@@ -140,8 +140,8 @@ export function MainContent() {
 
     // Scroll rápido e responsivo
     useSmoothScroll(() => el!, {
-      speed: 1.0,
-      smoothness: 0.2,
+      speed: 1,
+      smoothness: 0.1,
       lock: altPressed,
     })
 
@@ -200,7 +200,7 @@ export function MainContent() {
                     }
                   }}
                   onDblClick={() => {
-                    if (file.ftype === 'Folder') {
+                    if (file.ftype === 'folder') {
                       nav.goPath(file.path)
                       fil.resetSelected()
                       fil.resetInterval()
@@ -209,21 +209,39 @@ export function MainContent() {
                 >
                   <div class="grid h-[38px] min-w-0 grid-cols-[38px_minmax(200px,1fr)_96px_84px_90px] items-center gap-0.5 pl-1">
                     <Show
-                      when={file.ftype === 'Image'}
+                      when={[
+                        'png',
+                        'jpg',
+                        'jpeg',
+                        'gif',
+                        'webp',
+                        'svg',
+                        'tiff',
+                        'tif',
+                        'heic',
+                        'heif',
+                        'avif',
+                        'ico',
+                      ].includes(file.ftype.toLowerCase())}
                       fallback={
-                        <img src={icons[file.ftype]} alt={file.ftype} height={38} width={38} />
+                        <img
+                          src={icons[file.ftype] || icons['unknown']}
+                          alt={file.ftype}
+                          height={38}
+                          width={38}
+                        />
                       }
                     >
                       <ThumbnailImage filePath={file.path} alt={file.ftype} />
                     </Show>
-                    <div class="ml-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                    <div class="ml-2 truncate">
                       {file.name}
                     </div>
-                    <div class="overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-secondary)]">
+                    <div class="truncate text-[var(--text-secondary)]">
                       {file.ftype}
                     </div>
-                    <div class="overflow-hidden text-[0.8rem] text-ellipsis whitespace-nowrap text-[var(--text-secondary)]">
-                      {file.ftype != 'Folder' && file.size}
+                    <div class="text-[0.8rem] truncate text-[var(--text-secondary)]">
+                      {file.ftype != 'folder' && file.size}
                     </div>
                     <div class="text-[0.8rem] text-[var(--text-secondary)]">
                       {file.last_modified}

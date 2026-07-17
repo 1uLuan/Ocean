@@ -1,12 +1,14 @@
 import { ArrowLeft, ArrowRight, MagnifyingGlass, CaretRight, Gear } from 'phosphor-solid'
-import { useNavigationStore } from '@/stores/NavigationStore.ts'
+import { useNavigationStore } from '@/stores/NavigationStore'
 import { useConfigStore } from '@/stores/ConfigStore'
 import useSmoothScroll from '@/hooks/useSmoothScroll'
 import { Show, For } from 'solid-js'
+import { useSidebarItemsStore } from '@/stores/SidebarItemsStore'
 
 export function TopBar() {
   const nav = useNavigationStore()
   const conf = useConfigStore()
+  const sidebar = useSidebarItemsStore()
 
   let listEl: HTMLDivElement | undefined
   useSmoothScroll(() => listEl, { speed: 1.0, smoothness: 0.3 })
@@ -27,6 +29,14 @@ export function TopBar() {
           type="button"
           class="flex w-10 flex-row items-center justify-center rounded-md hover:bg-[var(--bg-hover-secondary)]"
           onClick={() => nav.goNextPath()}
+        >
+          <ArrowRight />
+        </button>
+        <button
+          data-component="Button"
+          type="button"
+          class="flex w-10 flex-row items-center justify-center rounded-md hover:bg-[var(--bg-hover-secondary)]"
+          onClick={() => { sidebar.addItem(nav.path); console.log("path:" + nav.path)}}
         >
           <ArrowRight />
         </button>

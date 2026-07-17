@@ -1,10 +1,18 @@
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
+use unicode_normalization::UnicodeNormalization;
 
 use crate::configuration::load_config;
 use crate::management::Fileinfo;
 use crate::utils::format_size;
+
+fn normalize_name(s: &str) -> String {
+    s.nfd() // Decompõe o caractere (ex: Á -> A + ´)
+        .filter(|c| !matches!(c, '\u{0300}'..='\u{036f}')) // Remove os diacríticos
+        .collect::<String>()
+        .to_lowercase()
+}
 
 #[tauri::command]
 pub async fn hunt_dir(app: tauri::AppHandle, dir_path: &str) -> Result<Vec<Fileinfo>, String> {
@@ -23,52 +31,27 @@ pub async fn hunt_dir(app: tauri::AppHandle, dir_path: &str) -> Result<Vec<Filei
                                 continue;
                             }
                             let ftype = if entry.path().is_dir() {
-                                "Folder"
+                                "folder".to_string()
                             } else if entry.path().is_file() {
-                                if let Some(ext) = entry
-                                    .path()
-                                    .extension()
+                                let path = entry.path();
+
+                                path.extension()
                                     .and_then(|e| e.to_str())
                                     .map(|s| s.to_ascii_lowercase())
-                                {
-                                    if [
-                                        "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "tiff",
-                                        "tif", "heic", "heif", "avif", "ico",
-                                    ]
-                                    .contains(&ext.as_str())
-                                    {
-                                        "Image"
-                                    } else if &ext.as_str() == &"Txt" {
-                                        "Text"
-                                    } else if [
-                                        "mp4", "mkv", "mov", "avi", "webm", "m4v", "3gp", "flv",
-                                        "wmv", "mpeg", "mpg", "ts", "m2ts", "mts", "ogv",
-                                    ]
-                                    .contains(&ext.as_str())
-                                    {
-                                        "Video"
-                                    } else if [
-                                        "mp3", "wav", "flac", "aac", "ogg", "oga", "m4a", "opus",
-                                        "wma", "aiff", "aif", "mid", "midi", "amr",
-                                    ]
-                                    .contains(&ext.as_str())
-                                    {
-                                        "Audio"
-                                    } else if [
-                                        "sh", "bash", "zsh", "fish", "run", "bin", "out",
-                                        "appimage",
-                                    ]
-                                    .contains(&ext.as_str())
-                                    {
-                                        "Executavel"
-                                    } else {
-                                        "Unknown"
-                                    }
-                                } else {
-                                    "Unknown"
-                                }
+                                    .unwrap_or_else(|| {
+                                        // Fallback: Abre os primeiros bytes do arquivo para inferir o tipo real
+                                        if let Ok(kind) = infer::get_from_path(&path) {
+                                            if let Some(k) = kind {
+                                                return k.extension().to_string();
+                                                // ex: "png", "exe", "zip"
+                                            }
+                                        }
+
+                                        // Se nem o infer descobrir (ex: arquivos de texto puro como .bash_history)
+                                        "plain text".to_string()
+                                    })
                             } else {
-                                "Unknown"
+                                "unknown".to_string()
                             };
                             if let Ok(metadata) = entry.metadata() {
                                 let last_modified =
@@ -99,7 +82,7 @@ pub async fn hunt_dir(app: tauri::AppHandle, dir_path: &str) -> Result<Vec<Filei
         a_is_folder
             .cmp(&b_is_folder)
             .reverse()
-            .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+            .then_with(|| normalize_name(&a.name).cmp(&normalize_name(&b.name)))
     });
     Ok(list)
 }

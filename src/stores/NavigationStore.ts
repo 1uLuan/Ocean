@@ -61,10 +61,11 @@ function removeWorkspace(ws: number) {
   })
 }
 
+/*
 function setWorkspacePath(ws: number) {
   setState('workspaces', ws, state.home)
 }
-
+*/
 function goPath(path: string) {
   setState('workspaces', state.actualWorkspace, path)
   setState({ path })
@@ -110,7 +111,7 @@ export const useNavigationStore = () => ({
   setNextPath,
   setHome,
   setActualWorkspace,
-  setWorkspacePath,
+  //setWorkspacePath,
   addWorkspace,
   removeWorkspace,
   goPath,

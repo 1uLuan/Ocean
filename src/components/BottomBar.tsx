@@ -10,9 +10,9 @@ export function BottomBar() {
   return (
     <div class="flex h-8 w-full flex-row items-center justify-center">
       <div class="h-full w-full" />
-      <div class="h-full w-full" onclick={() => setActive(!active())}>
+      <div class="relative h-full w-full" onclick={() => setActive(!active())}>
         <div
-          class={`absolute bottom-[-390px] flex h-96 w-96 flex-col rounded-tl-md rounded-tr-md bg-[var(--bg-secondary)] p-px transition-transform duration-150 ease-in-out ${active() ? '-translate-y-[422px] border-t border-r border-l border-[var(--border-primary)]' : 'translate-y-0'}`}
+          class={`absolute bottom-[-390px] flex h-96 w-full flex-col overflow-scroll rounded-tl-md rounded-tr-md bg-[var(--bg-secondary)] p-px transition-transform duration-150 ease-in-out ${active() ? '-translate-y-[422px] border-t border-r border-l border-[var(--border-primary)]' : 'translate-y-0'}`}
         >
           <For each={pop.compressions}>
             {(id) => <CompressPopup opId={id} onCancel={pop.cancelCompress} />}

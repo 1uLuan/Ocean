@@ -1,6 +1,8 @@
 mod configuration;
+mod disks;
 mod management;
 mod navigation;
+mod udisks;
 mod utils;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -28,7 +30,12 @@ pub fn run() {
             utils::open_terminal,
             utils::get_path_name,
             utils::get_thumbnail_cached,
-            utils::format_size
+            utils::format_size,
+            disks::list_disks,
+            disks::watch_disks,
+            disks::mount_disk,
+            disks::unmount_disk,
+            disks::eject_disk,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

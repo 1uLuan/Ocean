@@ -97,7 +97,21 @@ async function getPathName() {
   })
   setPathName(names)
 }
+
+function lastPathSegment(path: string): string {
+  if (path === '/') return 'Root' // ou d.name, ou "Sistema", como preferir
+  const segments = path.split('/').filter(Boolean)
+  return segments[segments.length - 1] ?? path
+}
 //
+
+function formatSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  const value = bytes / Math.pow(1024, i)
+  return `${value.toFixed(2)} ${units[i]}`
+}
 
 function setIsLoading(isLoading: boolean) {
   setState({ isLoading })
@@ -147,4 +161,6 @@ export const useFileStore = () => ({
   isSelected,
   intervalSelection,
   getPathName,
+  lastPathSegment,
+  formatSize,
 })

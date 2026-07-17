@@ -52,18 +52,27 @@ pub fn make_file(file_path: &str) -> Result<(), String> {
 
 #[tauri::command]
 pub fn rename_dir(dir_paths: Vec<String>, new_name: &str) -> Result<(), String> {
-    // For_each ou loops simples sem alocações extras
-    for dir_path in &dir_paths {
-        rename(dir_path, new_name).map_err(|e| format!("Erro ao renomear {} : {}", dir_path, e))?;
+    let mut counter = 0;
+    for dir_path in dir_paths {
+        rename(
+            &dir_path,
+            if counter == 0 {
+                new_name.to_string()
+            } else {
+                format!("{}{}", new_name, counter)
+            },
+        )
+        .map_err(|e| format!("Erro ao renomear {} : {}", &dir_path, e))?;
+        counter += 1;
     }
     Ok(())
 }
 
 #[tauri::command]
-pub async fn move_to_trash(dir_path: Vec<String>) {
+pub async fn move_to_trash(dir_paths: Vec<String>) {
     // Executar em bloco de thread secundária pois trash::delete_all é síncrono e bloqueante!
     let _ = tokio::task::spawn_blocking(move || {
-        if let Err(e) = delete_all(&dir_path) {
+        if let Err(e) = delete_all(&dir_paths) {
             eprintln!("Failed to delete: {}", e);
         }
     })

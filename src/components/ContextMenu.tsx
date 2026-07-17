@@ -5,6 +5,7 @@ import { useConfigStore } from '../stores/ConfigStore.ts'
 import { useFileStore } from '../stores/FileStore.ts'
 import { useNavigationStore } from '@/stores/NavigationStore.ts'
 import { usePopupControl } from '@/stores/PopupControl.ts'
+import { useSidebarItemsStore } from '@/stores/SidebarItemsStore.ts'
 import {
   Copy,
   CaretRight,
@@ -27,6 +28,20 @@ export function ContextMenu() {
   const nav = useNavigationStore()
   const pop = usePopupControl()
   const conf = useConfigStore()
+  const sidebar = useSidebarItemsStore()
+
+  const disabledPrefixes = [
+    "/", "/bin", "/boot", "/dev", "/etc", "/home", "/lib", "/lib64",
+    "/lost+found", "/mnt", "/opt", "/proc", "/root", "/run",
+    "/sbin", "/srv", "/sys", "/tmp", "/usr", "/var",
+  ]
+
+  function isDisabledPath(path: string): boolean {
+    if (path.startsWith("/home/") || path.startsWith("/run/media/" + fil.lastPathSegment(nav.home) + "/")) return false
+    return disabledPrefixes.some((prefix) =>
+      prefix === "/" ? path === "/" : path === prefix || path.startsWith(prefix + "/")
+    )
+  }
 
   const btnList = createMemo(() => [
     {
@@ -34,17 +49,20 @@ export function ContextMenu() {
       icon: <CaretRight weight="regular" />,
       onClick: undefined,
       onMouseEnter: () => cont.setShowDirMenu(true),
-      disabled: false,
+      disabled: false ,
+      visible: isDisabledPath(nav.path)||fil.selectedFiles.length === 0 ||
+        (fil.selectedFiles.length === 1 &&
+          fil.files.find(f => f.path === fil.selectedFiles[0])?.ftype === "folder"),
     },
     {
       label: 'Rename',
       icon: <PenNib weight="regular" />,
       onClick: () => {
-        cont.setOnEnter(cont.handleRename)
-        cont.openPopup()
+        cont.openRenamePopup()
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: fil.files.length === 0,
+      visible: isDisabledPath(nav.path)||fil.selectedFiles.length > 0,
     },
     {
       label: 'Copy',
@@ -54,6 +72,7 @@ export function ContextMenu() {
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: fil.files.length === 0,
+      visible: isDisabledPath(nav.path) ||fil.selectedFiles.length > 0,
     },
     {
       label: 'Cut',
@@ -63,6 +82,7 @@ export function ContextMenu() {
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: fil.files.length === 0,
+      visible: isDisabledPath(nav.path) ||fil.selectedFiles.length > 0,
     },
     {
       label: 'Paste',
@@ -75,7 +95,8 @@ export function ContextMenu() {
         }
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
-      disabled: fil.copySelected.length === 0 && fil.cutSelected.length === 0,
+      disabled: false,
+      visible: isDisabledPath(nav.path) ||fil.copySelected.length || fil.cutSelected.length,
     },
     {
       label:
@@ -95,6 +116,7 @@ export function ContextMenu() {
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: fil.files.length === 0,
+      visible: isDisabledPath(nav.path) ||fil.selectedFiles.length > 0,
     },
     {
       label: conf.config.toggle_hidden_files ? 'Hide Hidden Files' : 'Show Hidden Files',
@@ -110,6 +132,7 @@ export function ContextMenu() {
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
+      visible: true,
     },
     {
       label: 'Open Terminal',
@@ -123,6 +146,7 @@ export function ContextMenu() {
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
+      visible: true,
     },
     {
       label: 'Compress To .Zip',
@@ -133,6 +157,7 @@ export function ContextMenu() {
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
+      visible: fil.selectedFiles.length > 0,
     },
     {
       label: 'Extract Zip Here',
@@ -142,6 +167,15 @@ export function ContextMenu() {
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
+      visible: fil.selectedFiles.length > 0,
+    },
+    {
+      label: 'add to places',
+      icon: <Archive weight="regular" />,
+      onClick: () => sidebar.addItem(nav.path),
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: false,
+      visible: true,
     },
   ])
 
@@ -165,7 +199,7 @@ export function ContextMenu() {
         data-component="Context-Menu"
         class="absolute z-50 flex w-64 flex-col rounded-md border border-[var(--border-primary)] bg-[var(--bg-modal)] p-1 shadow-[var(--shadow-md)]"
         style={{
-          top: `${Math.min(cont.menuPos!.y - 0, window.innerHeight - 275)}px`,
+          top: `${Math.min(cont.menuPos!.y - 0, window.innerHeight - 370)}px`,
           left: `${Math.min(cont.menuPos!.x + 3, window.innerWidth - 260)}px`,
         }}
         onClick={() => {
@@ -176,25 +210,28 @@ export function ContextMenu() {
         <For each={btnList()}>
           {(item) => (
             <>
-              <Show when={['Move To Trash', 'Delete'].includes(item.label)}>
-                <div class="h-[1px] w-full bg-[var(--border-secondary)]" />
-                <div class="h-1" />
-              </Show>
-              <button
-                class={`flex h-7 w-full items-center rounded-md text-[0.75rem] ${
+              <Show when={item.visible}>
+                <Show when={['Move To Trash', 'Delete',].includes(item.label)}>
+                  <div class="h-[1px] w-full bg-[var(--border-secondary)]" />
+                  <div class="h-1" />
+                </Show>
+
+                <button class={`flex h-7 w-full items-center rounded-md text-[0.75rem] ${
                   item.disabled ? 'text-[var(--text-muted)]' : 'hover:bg-[var(--bg-card-hover)]'
-                }`}
-                onClick={item.onClick}
-                onMouseEnter={item.onMouseEnter}
-                disabled={item.disabled}
-              >
-                <div class="flex flex-row items-center gap-1 pl-2.5">
-                  {item.icon} {item.label}
-                </div>
-              </button>
-              <Show when={['Move To Trash', 'Delete'].includes(item.label)}>
-                <div class="h-1" />
-                <div class="h-[1px] w-full bg-[var(--border-secondary)]" />
+                  }`}
+                  onClick={item.onClick}
+                  onMouseEnter={() => {if (!item.disabled) item.onMouseEnter?.()}}
+                  disabled={item.disabled}
+                >
+                  <div class="flex flex-row items-center gap-1 pl-2.5">
+                    {item.icon} {item.label}
+                  </div>
+                </button>
+
+                <Show when={['Move To Trash', 'Delete'].includes(item.label)}>
+                  <div class="h-1" />
+                  <div class="h-[1px] w-full bg-[var(--border-secondary)]" />
+                </Show>
               </Show>
             </>
           )}

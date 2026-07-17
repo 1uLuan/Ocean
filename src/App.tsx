@@ -57,7 +57,7 @@ function FileExplorer() {
   onMount(() => {
     invoke<string>('get_home').then((homePath) => {
       nav.setHome(homePath)
-      nav.setWorkspacePath(0)
+      nav.goPath(homePath)
     })
   })
 
