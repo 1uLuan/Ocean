@@ -128,7 +128,7 @@ async function pasteDir() {
   try {
     await invoke('copy_items_to', {
       dirPaths: fil.copySelected,
-      targetPath: nav.path,
+      targetPath: fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path,
       copyId: id,
     })
   } catch (error) {
@@ -145,7 +145,7 @@ async function moveDir() {
     document.body.style.cursor = 'wait'
     await invoke('move_items_to', {
       dirPaths: fil.cutSelected,
-      targetPath: nav.workspaces[nav.actualWorkspace],
+      targetPath: fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path,
     })
   } catch (error) {
     console.log(error)

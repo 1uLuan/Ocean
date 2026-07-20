@@ -18,6 +18,7 @@ const [state, setState] = createStore<{ items: SidebarItem[] }>({
 })
 
 function addItem(shortcut_path: string) {
+  if (state.items.some((i) => i.name === fil.lastPathSegment(shortcut_path))) return
   setState('items', (prev) => [
     ...prev,
     {
@@ -26,7 +27,6 @@ function addItem(shortcut_path: string) {
       path: shortcut_path,
     },
   ])
-  console.log("test:"+state.items)
 }
 
 function removeItem(name: string) {

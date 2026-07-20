@@ -18,6 +18,7 @@ type FileStore = {
   intervalSelected: number[]
   isLoading: boolean
   reload: boolean
+  placeIsSelected: boolean
 }
 
 const [state, setState] = createStore<FileStore>({
@@ -29,6 +30,7 @@ const [state, setState] = createStore<FileStore>({
   intervalSelected: [],
   isLoading: false,
   reload: false,
+  placeIsSelected: false,
 })
 
 //SET FILES
@@ -121,6 +123,10 @@ function setReload(reload: boolean) {
   setState({ reload })
 }
 
+function setPlaceIsSelected(value: boolean) {
+  setState({placeIsSelected: value})
+}
+
 export const useFileStore = () => ({
   get files() {
     return state.files
@@ -146,6 +152,9 @@ export const useFileStore = () => ({
   get reload() {
     return state.reload
   },
+  get placeIsSelected() {
+    return state.placeIsSelected
+  },
 
   setFiles,
   toggleSelected,
@@ -163,4 +172,5 @@ export const useFileStore = () => ({
   getPathName,
   lastPathSegment,
   formatSize,
+  setPlaceIsSelected,
 })

@@ -37,6 +37,7 @@ export function ContextMenu() {
   ]
 
   function isDisabledPath(path: string): boolean {
+    if (!path) return false
     if (path.startsWith("/home/") || path.startsWith("/run/media/" + fil.lastPathSegment(nav.home) + "/")) return false
     return disabledPrefixes.some((prefix) =>
       prefix === "/" ? path === "/" : path === prefix || path.startsWith(prefix + "/")
@@ -49,8 +50,8 @@ export function ContextMenu() {
       icon: <CaretRight weight="regular" />,
       onClick: undefined,
       onMouseEnter: () => cont.setShowDirMenu(true),
-      disabled: false ,
-      visible: isDisabledPath(nav.path)||fil.selectedFiles.length === 0 ||
+      disabled: isDisabledPath(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length === 0 ||
         (fil.selectedFiles.length === 1 &&
           fil.files.find(f => f.path === fil.selectedFiles[0])?.ftype === "folder"),
     },
@@ -61,8 +62,8 @@ export function ContextMenu() {
         cont.openRenamePopup()
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
-      disabled: fil.files.length === 0,
-      visible: isDisabledPath(nav.path)||fil.selectedFiles.length > 0,
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
       label: 'Copy',
@@ -71,8 +72,8 @@ export function ContextMenu() {
         fil.setCopySelected(fil.selectedFiles)
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
-      disabled: fil.files.length === 0,
-      visible: isDisabledPath(nav.path) ||fil.selectedFiles.length > 0,
+      disabled: isDisabledPath(nav.path),
+      visible: fil.selectedFiles.length > 0,
     },
     {
       label: 'Cut',
@@ -81,8 +82,8 @@ export function ContextMenu() {
         fil.setCutSelected(fil.selectedFiles)
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
-      disabled: fil.files.length === 0,
-      visible: isDisabledPath(nav.path) ||fil.selectedFiles.length > 0,
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
       label: 'Paste',
@@ -95,8 +96,8 @@ export function ContextMenu() {
         }
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
-      disabled: false,
-      visible: isDisabledPath(nav.path) ||fil.copySelected.length || fil.cutSelected.length,
+      disabled: isDisabledPath(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
+      visible: fil.copySelected.length || fil.cutSelected.length,
     },
     {
       label:
@@ -115,8 +116,8 @@ export function ContextMenu() {
         }
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
-      disabled: fil.files.length === 0,
-      visible: isDisabledPath(nav.path) ||fil.selectedFiles.length > 0,
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
       label: conf.config.toggle_hidden_files ? 'Hide Hidden Files' : 'Show Hidden Files',
@@ -132,14 +133,14 @@ export function ContextMenu() {
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
-      visible: true,
+      visible: !fil.placeIsSelected,
     },
     {
       label: 'Open Terminal',
       icon: <TerminalWindow weight="regular" />,
       onClick: async () => {
         try {
-          await invoke('open_terminal', { path: nav.path })
+          await invoke('open_terminal', { path: fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path })
         } catch (error) {
           console.log(error)
         }
@@ -149,15 +150,15 @@ export function ContextMenu() {
       visible: true,
     },
     {
-      label: 'Compress To .Zip',
+      label: 'Compress To Zip',
       icon: <ArchiveBox weight="regular" />,
       onClick: () => {
         cont.setOnEnter(cont.compressToZip)
         cont.openPopup()
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
-      disabled: false,
-      visible: fil.selectedFiles.length > 0,
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
       label: 'Extract Zip Here',
@@ -166,16 +167,24 @@ export function ContextMenu() {
         cont.extractZip()
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
-      disabled: false,
-      visible: fil.selectedFiles.length > 0,
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
-      label: 'add to places',
+      label: 'Add To Places',
       icon: <Archive weight="regular" />,
-      onClick: () => sidebar.addItem(nav.path),
+      onClick: () => sidebar.addItem(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
-      visible: true,
+      visible: !fil.placeIsSelected,
+    },
+    {
+      label: 'Remove From Places',
+      icon: <Archive weight="regular" />,
+      onClick: () => sidebar.removeItem(fil.lastPathSegment(fil.selectedFiles[0])),
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: false,
+      visible: fil.placeIsSelected,
     },
   ])
 
@@ -186,13 +195,20 @@ export function ContextMenu() {
         class="fixed inset-0 z-40 h-screen w-screen bg-transparent"
         onMouseDown={(e) => {
           if (e.button === 2) {
+            fil.resetSelected()
+            fil.resetInterval()
             return
-          } else cont.setShowMenu(false)
+          }
+          cont.setShowMenu(false)
           cont.setShowDirMenu(false)
+          fil.resetSelected()
+          fil.resetInterval()
+          fil.setPlaceIsSelected(false)
         }}
         onContextMenu={() => {
           cont.setShowMenu(false)
           cont.setShowDirMenu(false)
+
         }}
       />
       <div
@@ -219,7 +235,12 @@ export function ContextMenu() {
                 <button class={`flex h-7 w-full items-center rounded-md text-[0.75rem] ${
                   item.disabled ? 'text-[var(--text-muted)]' : 'hover:bg-[var(--bg-card-hover)]'
                   }`}
-                  onClick={item.onClick}
+                  onClick={() => {
+                    fil.setPlaceIsSelected(false)
+                    item.onClick?.()
+                    fil.resetSelected()
+                    fil.resetInterval()
+                  }}
                   onMouseEnter={() => {if (!item.disabled) item.onMouseEnter?.()}}
                   disabled={item.disabled}
                 >

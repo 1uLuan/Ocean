@@ -1,5 +1,8 @@
 import { createStore } from 'solid-js/store'
 import { invoke } from '@tauri-apps/api/core'
+import { useFileStore } from './FileStore'
+
+const fil = useFileStore()
 
 type ConfigType = {
   theme: string
@@ -55,6 +58,8 @@ function saveConfig() {
 
 function toggleHiddenFiles() {
   setState('config', 'toggle_hidden_files', (prev) => !prev)
+  fil.resetSelected()
+  fil.resetInterval()
   saveConfig()
 }
 
