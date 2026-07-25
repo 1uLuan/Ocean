@@ -85,10 +85,10 @@ pub fn get_path_name(paths: Vec<String>) -> Vec<String> {
         .iter()
         .filter_map(|path| {
             if path == "/" {
-                return Some("Root".to_string()); // ou String::from("/")
+                return Some(String::from("/"));
             }
             Path::new(path)
-                .file_stem()
+                .file_name()
                 .and_then(|s| s.to_str())
                 .map(|s| s.to_string())
         })

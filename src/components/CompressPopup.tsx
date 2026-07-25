@@ -1,6 +1,6 @@
 import { onMount, onCleanup, createSignal, createResource, Show } from 'solid-js'
 import { listen, UnlistenFn } from '@tauri-apps/api/event'
-import { X } from 'phosphor-solid'
+import  X  from '~icons/ph/x'
 import { invoke } from '@tauri-apps/api/core'
 
 type CompressProgressPayload = {
@@ -48,17 +48,17 @@ export function CompressPopup(props: Props) {
   )
 
   return (
-    <div class="flex h-40 w-full shrink-0 flex-col rounded-md border border-[var(--border-secondary)] bg-[var(--bg-card)] p-1">
+    <div class="flex h-40 w-full shrink-0 flex-col rounded-md border border-(--border-secondary) bg-(--bg-card) p-1">
       {/*top*/}
       <div class="flex flex-row items-start justify-between">
-        <div class="w-8/12 truncate rounded-sm border border-[var(--border-secondary)] bg-[var(--bg-secondary)] pl-1 text-[0.75rem]">
+        <div class="w-8/12 truncate rounded-sm border border-(--border-secondary) bg-(--bg-secondary) pl-1 text-[0.75rem]">
           {file()}
         </div>
         <button
-          class="transition-color flex h-7 w-7 items-center justify-center rounded-sm border border-[var(--border-secondary)] duration-150 hover:bg-[var(--accent-danger)]"
+          class="transition-color flex h-7 w-7 items-center justify-center rounded-sm border border-(--border-secondary) duration-150 hover:bg-(--accent-danger)"
           onClick={() => props.onCancel(props.opId)}
         >
-          <X weight="regular" size={14} />
+          <X class='size-3' />
         </button>
       </div>
       {/*middle*/}
@@ -79,10 +79,10 @@ export function CompressPopup(props: Props) {
         </div>
         <div class="trasparent flex h-1.5 w-full flex-row gap-0.5 overflow-hidden">
           <div
-            class="h-full rounded-full bg-[var(--accent-glow)] transition-[width] ease-in-out"
+            class="h-full rounded-full bg-(--accent-glow) transition-[width] ease-in-out"
             style={{ width: Math.floor(percent()) + '%' }}
           />
-          <div class="h-full flex-1 rounded-full bg-[var(--bg-primary)] transition-[width] ease-in-out" />
+          <div class="h-full flex-1 rounded-full bg-(--bg-primary) transition-[width] ease-in-out" />
         </div>
       </div>
     </div>

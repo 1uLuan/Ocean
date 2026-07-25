@@ -1,5 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
 import { createStore } from 'solid-js/store'
+import { useConfigStore } from './ConfigStore'
+
+const conf = useConfigStore()
 
 type NavigationState = {
   path: string
@@ -43,6 +46,9 @@ function addWorkspace(initialPath?: string) {
   setState('workspaces', (prev) => [...prev, newPath])
   const newIndex = state.workspaces.length - 1
   setState({ actualWorkspace: newIndex, path: newPath })
+  if (state.workspaces.length === 2) {
+    conf.toggleWorkspaceActive(true)
+  }
   return newIndex
 }
 
@@ -59,6 +65,9 @@ function removeWorkspace(ws: number) {
     actualWorkspace: newActive,
     path: state.workspaces[newActive] || state.home,
   })
+  if (state.workspaces.length === 1) {
+    conf.toggleWorkspaceActive(false)
+  }
 }
 
 /*

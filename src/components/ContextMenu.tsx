@@ -6,28 +6,25 @@ import { useFileStore } from '../stores/FileStore.ts'
 import { useNavigationStore } from '@/stores/NavigationStore.ts'
 import { usePopupControl } from '@/stores/PopupControl.ts'
 import { useSidebarItemsStore } from '@/stores/SidebarItemsStore.ts'
-import {
-  Copy,
-  CaretRight,
-  PenNib,
-  Clipboard,
-  Trash,
-  Eye,
-  TerminalWindow,
-  FolderSimple,
-  EyeSlash,
-  Scissors,
-  File,
-  ArchiveBox,
-  Archive,
-} from 'phosphor-solid'
+//icons
+import Copy from '~icons/ph/copy'
+import CaretRight from '~icons/ph/caret-right'
+import PenNib from '~icons/ph/pen-nib'
+import Clipboard from '~icons/ph/clipboard'
+import Trash from '~icons/ph/trash'
+import TerminalWindow from '~icons/ph/terminal-window'
+import FolderSimple from '~icons/ph/folder-simple'
+import Scissors from '~icons/ph/scissors'
+import File from '~icons/ph/file'
+import ArchiveBox from '~icons/ph/archive-box'
+import Archive from '~icons/ph/archive'
+
 
 export function ContextMenu() {
   const fil = useFileStore()
   const cont = useContextMenuStore()
   const nav = useNavigationStore()
   const pop = usePopupControl()
-  const conf = useConfigStore()
   const sidebar = useSidebarItemsStore()
 
   const disabledPrefixes = [
@@ -47,17 +44,19 @@ export function ContextMenu() {
   const btnList = createMemo(() => [
     {
       label: 'Make New',
-      icon: <CaretRight weight="regular" />,
+      icon: <CaretRight />,
       onClick: undefined,
       onMouseEnter: () => cont.setShowDirMenu(true),
       disabled: isDisabledPath(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
-      visible: !fil.placeIsSelected && fil.selectedFiles.length === 0 ||
+      visible: !fil.placeIsSelected && (
+        fil.selectedFiles.length === 0 ||
         (fil.selectedFiles.length === 1 &&
-          fil.files.find(f => f.path === fil.selectedFiles[0])?.ftype === "folder"),
+          fil.files.find(f => f.path === fil.selectedFiles[0])?.ftype === "folder")
+      ),
     },
     {
       label: 'Rename',
-      icon: <PenNib weight="regular" />,
+      icon: <PenNib />,
       onClick: () => {
         cont.openRenamePopup()
       },
@@ -67,17 +66,17 @@ export function ContextMenu() {
     },
     {
       label: 'Copy',
-      icon: <Copy weight="regular" />,
+      icon: <Copy />,
       onClick: () => {
         fil.setCopySelected(fil.selectedFiles)
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: isDisabledPath(nav.path),
-      visible: fil.selectedFiles.length > 0,
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
       label: 'Cut',
-      icon: <Scissors weight="regular" />,
+      icon: <Scissors />,
       onClick: () => {
         fil.setCutSelected(fil.selectedFiles)
       },
@@ -87,7 +86,7 @@ export function ContextMenu() {
     },
     {
       label: 'Paste',
-      icon: <Clipboard weight="regular" />,
+      icon: <Clipboard />,
       onClick: async () => {
         if (fil.cutSelected.length > 0) {
           cont.moveDir()
@@ -97,14 +96,14 @@ export function ContextMenu() {
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: isDisabledPath(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
-      visible: fil.copySelected.length || fil.cutSelected.length,
+      visible: !fil.placeIsSelected && (fil.copySelected.length || fil.cutSelected.length),
     },
     {
       label:
         nav.workspaces[nav.actualWorkspace] === nav.home + '/.local/share/Trash/files'
           ? 'Delete'
           : 'Move To Trash',
-      icon: <Trash weight="regular" />,
+      icon: <Trash />,
       onClick: () => {
         if (fil.selectedFiles.length > 0) {
           if (nav.workspaces[nav.actualWorkspace] === nav.home + '/.local/share/Trash/files') {
@@ -120,24 +119,8 @@ export function ContextMenu() {
       visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
-      label: conf.config.toggle_hidden_files ? 'Hide Hidden Files' : 'Show Hidden Files',
-      icon: conf.config.toggle_hidden_files ? (
-        <EyeSlash weight="regular" />
-      ) : (
-        <Eye weight="regular" />
-      ),
-      onClick: () => {
-        conf.toggleHiddenFiles()
-        fil.setReload(!fil.reload)
-        console.log(fil.reload)
-      },
-      onMouseEnter: () => cont.setShowDirMenu(false),
-      disabled: false,
-      visible: !fil.placeIsSelected,
-    },
-    {
       label: 'Open Terminal',
-      icon: <TerminalWindow weight="regular" />,
+      icon: <TerminalWindow />,
       onClick: async () => {
         try {
           await invoke('open_terminal', { path: fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path })
@@ -151,7 +134,7 @@ export function ContextMenu() {
     },
     {
       label: 'Compress To Zip',
-      icon: <ArchiveBox weight="regular" />,
+      icon: <ArchiveBox />,
       onClick: () => {
         cont.setOnEnter(cont.compressToZip)
         cont.openPopup()
@@ -162,7 +145,7 @@ export function ContextMenu() {
     },
     {
       label: 'Extract Zip Here',
-      icon: <Archive weight="regular" />,
+      icon: <Archive />,
       onClick: () => {
         cont.extractZip()
       },
@@ -172,7 +155,7 @@ export function ContextMenu() {
     },
     {
       label: 'Add To Places',
-      icon: <Archive weight="regular" />,
+      icon: <Archive />,
       onClick: () => sidebar.addItem(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
@@ -180,7 +163,7 @@ export function ContextMenu() {
     },
     {
       label: 'Remove From Places',
-      icon: <Archive weight="regular" />,
+      icon: <Archive />,
       onClick: () => sidebar.removeItem(fil.lastPathSegment(fil.selectedFiles[0])),
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
@@ -212,8 +195,7 @@ export function ContextMenu() {
         }}
       />
       <div
-        data-component="Context-Menu"
-        class="absolute z-50 flex w-64 flex-col rounded-md border border-[var(--border-primary)] bg-[var(--bg-modal)] p-1 shadow-[var(--shadow-md)]"
+        class="absolute z-50 flex w-64 flex-col rounded-lg border border-(--border-primary) bg-(--bg-modal) p-1 shadow-(--shadow-md)"
         style={{
           top: `${Math.min(cont.menuPos!.y - 0, window.innerHeight - 370)}px`,
           left: `${Math.min(cont.menuPos!.x + 3, window.innerWidth - 260)}px`,
@@ -228,30 +210,26 @@ export function ContextMenu() {
             <>
               <Show when={item.visible}>
                 <Show when={['Move To Trash', 'Delete',].includes(item.label)}>
-                  <div class="h-[1px] w-full bg-[var(--border-secondary)]" />
+                  <div class="h-px w-full bg-(--border-secondary)" />
                   <div class="h-1" />
                 </Show>
 
-                <button class={`flex h-7 w-full items-center rounded-md text-[0.75rem] ${
-                  item.disabled ? 'text-[var(--text-muted)]' : 'hover:bg-[var(--bg-card-hover)]'
+                <button class={`flex h-7 w-full items-center rounded-sm text-[0.75rem] gap-1 ${
+                  item.disabled ? 'text-(--text-muted)' : 'hover:bg-(--bg-card-hover)'
                   }`}
                   onClick={() => {
                     fil.setPlaceIsSelected(false)
                     item.onClick?.()
-                    fil.resetSelected()
-                    fil.resetInterval()
                   }}
                   onMouseEnter={() => {if (!item.disabled) item.onMouseEnter?.()}}
                   disabled={item.disabled}
                 >
-                  <div class="flex flex-row items-center gap-1 pl-2.5">
-                    {item.icon} {item.label}
-                  </div>
+                  <div class="pl-2.5"> {item.icon} </div> {item.label}
                 </button>
 
                 <Show when={['Move To Trash', 'Delete'].includes(item.label)}>
                   <div class="h-1" />
-                  <div class="h-[1px] w-full bg-[var(--border-secondary)]" />
+                  <div class="h-px w-full bg-(--border-secondary)" />
                 </Show>
               </Show>
             </>
@@ -259,7 +237,7 @@ export function ContextMenu() {
         </For>
         <Show when={cont.showDirMenu && cont.menuPos && cont.showMenu}>
           <div
-            class="absolute z-50 flex flex-col rounded-md border border-[var(--border-primary)] bg-[var(--bg-modal)] p-1 shadow-[var(--shadow-md)]"
+            class="absolute z-50 flex flex-col rounded-lg border border-(--border-primary) bg-(--bg-modal) p-1 shadow-(--shadow-md)"
             style={{
               top: '0px',
               left: `${cont.menuPos!.x > window.innerWidth - 380 ? -122 : 256}px`,
@@ -268,25 +246,25 @@ export function ContextMenu() {
             }}
           >
             <button
-              class="flex h-7 w-full items-center rounded-md text-[0.75rem] hover:bg-[var(--bg-card-hover)]"
+              class="flex h-7 w-full items-center rounded-sm text-[0.75rem] hover:bg-(--bg-card-hover)"
               onClick={() => {
                 cont.setOnEnter(cont.makeDir)
                 cont.openPopup()
               }}
             >
               <div class="flex flex-row items-center gap-1 pl-2.5">
-                <FolderSimple weight="regular" /> Folder
+                <FolderSimple /> Folder
               </div>
             </button>
             <button
-              class="flex h-7 w-full items-center rounded-md text-[0.75rem] hover:bg-[var(--bg-card-hover)]"
+              class="flex h-7 w-full items-center rounded-sm text-[0.75rem] hover:bg-(--bg-card-hover)"
               onClick={() => {
                 cont.setOnEnter(cont.makeFile)
                 cont.openPopup()
               }}
             >
               <div class="flex flex-row items-center gap-1 pl-2.5">
-                <File weight="regular" /> File
+                <File /> File
               </div>
             </button>
           </div>

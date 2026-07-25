@@ -1,7 +1,14 @@
 import { For, type JSX, createMemo, onMount, Show } from 'solid-js'
 import { useNavigationStore } from '@/stores/NavigationStore'
 import { useFileStore } from '@/stores/FileStore'
-import { ArrowFatDown, ComputerTower, HouseLine, TrashSimple, Eject, GameController } from 'phosphor-solid'
+//icons
+import ArrowFatDown from '~icons/ph/arrow-fat-down-duotone'
+import ComputerTower from '~icons/ph/computer-tower-duotone'
+import HouseLine from '~icons/ph/house-line-duotone'
+import TrashSimple from '~icons/ph/trash-simple-duotone'
+import Eject from '~icons/ph/eject-duotone'
+
+
 import { useDiskStore } from '@/stores/DiskStore'
 import { useSidebarItemsStore } from '@/stores/SidebarItemsStore'
 import { useContextMenuStore } from '@/stores/ContextMenuStore'
@@ -21,7 +28,6 @@ export function SideBar() {
       ({
         Home: [HouseLine, nav.home],
         Download: [ArrowFatDown, nav.home + '/Downloads'],
-        Game: [GameController, nav.home + '/Games'],
         Trash: [TrashSimple, nav.home + '/.local/share/Trash/files'],
       }) as Record<string, [IconComponent, string]>
   )
@@ -41,10 +47,10 @@ export function SideBar() {
         {([name, [Icon, path]]) => (
           <div class="flex items-center">
               <button
-                class={`h-8 w-full hover:bg-[var(--bg-hover-secondary)] ${
+                class={`h-8 w-full hover:bg-(--bg-hover-secondary) ${
                   fil.isSelected(path) && fil.placeIsSelected
-                    ? 'bg-[var(--bg-hover-secondary)]'
-                    : 'hover:bg-[var(--bg-hover-primary)]'
+                    ? 'bg-(--bg-hover-secondary)'
+                    : 'hover:bg-(--bg-hover-primary)'
                 }`}
               onClick={() => {
                 nav.goPath(path)
@@ -57,7 +63,7 @@ export function SideBar() {
               }}
             >
               <div class="ml-0.5 flex h-full items-center gap-1.5 text-[0.9rem]">
-                <Icon size={20} weight="duotone" class="shrink-0"/>
+                <Icon class='size-5 shrink-0'/>
                 <span class="truncate">{name}</span>
               </div>
             </button>
@@ -66,20 +72,20 @@ export function SideBar() {
       </For>
 
       <div class='p-0.5 flex flex-col w-full h-auto items-center justify-center'>
-        <div class='w-4/5 h-px bg-[var(--border-primary)] shrink-0' />
+        <div class='w-4/5 h-px bg-(--border-primary) shrink-0' />
         <div class='text-[0.9rem]'>Dispositivos</div>
       </div>
       <For each={disk.disks.slice().sort((a, b) => Number(a.is_removable) - Number(b.is_removable))}>
         {(d) => {
           return (
-            <div class="flex w-full flex-col overflow-ellipsis whitespace-nowrap">
+            <div class="flex w-full flex-col text-ellipsis whitespace-nowrap">
               <For each={d.partitions.filter((p) => p.mount_point !== "/boot")}>
                 {(p) => (
                   <button
-                    class={`h-8 w-full hover:bg-[var(--bg-hover-secondary)] ${
+                    class={`h-8 w-full hover:bg-(--bg-hover-secondary) ${
                       fil.isSelected(p.mount_point) && fil.placeIsSelected
-                        ? 'bg-[var(--bg-hover-secondary)]'
-                        : 'hover:bg-[var(--bg-hover-primary)]'
+                        ? 'bg-(--bg-hover-secondary)'
+                        : 'hover:bg-(--bg-hover-primary)'
                     }`}
                     onClick={async () => {
                       let mountPoint = p.mount_point
@@ -99,14 +105,14 @@ export function SideBar() {
                   >
                     <div class='flex flex-row'>
                       <div class="ml-0.5 flex h-full items-center gap-1.5 text-[0.9rem]">
-                        <ComputerTower size={20} weight="duotone" class="shrink-0" />
+                        <ComputerTower class='size-5 shrink-0'/>
                         <span class="truncate">
                           {p.is_mounted ? fil.lastPathSegment(p.mount_point) : d.name}
                         </span>
                       </div>
                       <Show when={p.is_mounted && d.is_removable}>
                         <div class="w-full h-full flex justify-end">
-                          <div class='w-6 h-6 hover:bg-[var(--accent-danger)] flex items-center justify-center rounded-sm'
+                          <div class='w-6 h-6 hover:bg-(--accent-danger) flex items-center justify-center rounded-sm'
                             onClick={() => disk.ejectDisk(p.object_path, d.drive_object_path)}
                           >
                             <Eject />

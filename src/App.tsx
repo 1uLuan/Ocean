@@ -7,7 +7,6 @@ import { TopBar } from '@/components/TopBar.tsx'
 import { SideBar } from '@/components/SideBar.tsx'
 import { MainContent } from '@/components/MainContent.tsx'
 import { ContextMenu } from '@/components/ContextMenu.tsx'
-import { IconContext } from 'phosphor-solid'
 import { TitleBar } from '@/components/TitleBar'
 import { ConfigScreen } from '@/components/ConfigScreen'
 import { BottomBar } from '@/components/BottomBar'
@@ -47,6 +46,7 @@ function FileExplorer() {
       if (e.key === 'Escape') {
         cont.setShowMenu(false)
         pop.setWarningPopup(false)
+        conf.toggleShowConfig(false)
         cont.closePopup()
       }
     }
@@ -63,7 +63,6 @@ function FileExplorer() {
 
   return (
     <main class="flex h-screen flex-col bg-[var(--bg-secondary)] text-[var(--text-primary)]">
-      <IconContext.Provider value={{ size: 16, color: 'var(--text-primary)', weight: `bold` }}>
         <div class="flex flex-none flex-col">
           <TitleBar />
           <TopBar />
@@ -85,7 +84,6 @@ function FileExplorer() {
         <ContextMenu />
         <NamePopup />
         <WarningPopup />
-      </IconContext.Provider>
     </main>
   )
 }

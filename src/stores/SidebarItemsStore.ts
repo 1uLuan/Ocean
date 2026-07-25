@@ -1,6 +1,7 @@
 import { JSX } from 'solid-js/jsx-runtime'
 import { createStore } from 'solid-js/store'
-import { FolderSimple } from "phosphor-solid"
+import FolderSimple from "~icons/ph/folder-simple-duotone"
+import GameController from '~icons/ph/game-controller-duotone'
 import { useFileStore } from './FileStore'
 
 const fil = useFileStore()
@@ -23,7 +24,7 @@ function addItem(shortcut_path: string) {
     ...prev,
     {
       name: fil.lastPathSegment(shortcut_path),
-      icon: FolderSimple,
+      icon: fil.lastPathSegment(shortcut_path) === "Games" ? GameController : FolderSimple,
       path: shortcut_path,
     },
   ])

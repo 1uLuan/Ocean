@@ -67,15 +67,9 @@ export function useKeyboardShortcuts() {
           break
         case 'add_workspace':
           nav.addWorkspace()
-          if (nav.workspaceCount === 2) {
-            conf.toggleWorkspaceActive(true)
-          }
           break
         case 'remove_workspace':
           nav.removeWorkspace(nav.actualWorkspace)
-          if (nav.workspaceCount === 1) {
-            conf.toggleWorkspaceActive(false)
-          }
           break
 
         // ========== SCROLL WORKSPACES ==========

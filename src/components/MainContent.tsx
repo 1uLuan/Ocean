@@ -166,17 +166,17 @@ export function MainContent() {
 
   return (
     <Show when={!conf.configIsOpen}>
-      <div class="flex h-full min-h-0 w-full min-w-0 flex-col bg-[var(--bg-primary)]">
+      <div class="flex h-full min-h-0 w-full min-w-0 flex-col bg-(--bg-primary)">
         <div
           ref={headerRef}
-          class="grid h-8 min-w-[600px] grid-cols-[minmax(200px,1fr)_100px_90px_90px] items-center text-[0.7rem] text-[var(--text-muted)] overflow-hidden"
+          class="grid h-8 min-w-150 grid-cols-[minmax(200px,1fr)_100px_90px_90px] items-center text-[0.7rem] text-(--text-muted) overflow-hidden"
         >
           <div class="pl-1.5">Nome</div>
           <div>Tipo</div>
           <div>Tamanho</div>
           <div>Modificado</div>
         </div>
-        <div class="h-px w-full shrink-0 bg-[var(--border-secondary)]" />
+        <div class="h-px w-full shrink-0 bg-(--border-secondary)" />
         <ul
           ref={setlistEl}
           class="flex h-full w-full min-w-0 list-none flex-col overflow-scroll"
@@ -185,10 +185,10 @@ export function MainContent() {
             {(file, index) => (
               <li class="w-full min-w-0">
                 <div
-                  class={`grid h-[38px] w-full min-w-[600px] grid-cols-[38px_minmax(200px,1fr)_96px_84px_90px] items-center gap-0.5 pl-1 text-left text-[0.8rem] ${
+                  class={`grid h-9.5 w-full min-w-150 grid-cols-[38px_minmax(200px,1fr)_96px_84px_90px] items-center gap-0.5 pl-1 text-left text-[0.8rem] ${
                     fil.isSelected(file.path) && !fil.placeIsSelected
-                      ? 'bg-[var(--bg-hover-secondary)]'
-                      : 'hover:bg-[var(--bg-hover-primary)]'
+                      ? 'bg-(--bg-hover-secondary)'
+                      : 'hover:bg-(--bg-hover-primary)'
                   }`}
                   onDblClick={() => {
                     if (file.ftype === 'folder') {
@@ -255,11 +255,11 @@ export function MainContent() {
                         }
                       }}
                   >
-                    <div class="truncate text-[var(--text-secondary)] w-full h-full items-center flex">{file.ftype}</div>
-                    <div class="text-[0.8rem] truncate text-[var(--text-secondary)] w-full h-full items-center flex">
+                    <div class="truncate text-(--text-secondary) w-full h-full items-center flex">{file.ftype}</div>
+                    <div class="text-[0.8rem] truncate text-(--text-secondary) w-full h-full items-center flex">
                       {file.ftype !== 'folder' && file.size}
                     </div>
-                    <div class="text-[0.8rem] text-[var(--text-secondary)] w-full h-full items-center flex">{file.last_modified}</div>
+                    <div class="text-[0.8rem] text-(--text-secondary) w-full h-full items-center flex">{file.last_modified}</div>
                   </div>
                 </div>
               </li>
@@ -270,7 +270,7 @@ export function MainContent() {
             when={fil.files.length === 0}
             fallback={
               <li
-                class="h-full w-full min-w-[600px]"
+                class="h-full w-full min-w-150"
                 onContextMenu={cont.handleContextMenu}
                 onMouseDown={(e) => {
                   if (e.button === 0 && e.ctrlKey && e.altKey) {

@@ -89,15 +89,9 @@ function intervalSelection(files: Fileinfo[]) {
 //
 
 //PATH NAME
-function setPathName(pathName: string[]) {
-  setState({ pathName })
-}
-
-async function getPathName() {
-  const names = await invoke<string[]>('get_path_name', {
-    paths: state.selectedFiles,
-  })
-  setPathName(names)
+async function getPathName(paths: string[]) {
+  const names = await invoke<string[]>('get_path_name', { paths })
+  setState({pathName: names})
 }
 
 function lastPathSegment(path: string): string {
@@ -161,7 +155,6 @@ export const useFileStore = () => ({
   setSelected,
   setCopySelected,
   setCutSelected,
-  setPathName,
   setIntervalSelected,
   resetInterval,
   resetSelected,
