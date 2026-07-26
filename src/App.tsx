@@ -1,59 +1,89 @@
 import '@/App.css'
 import '@/Themes.css'
-import { useEffect } from 'react'
+import { createEffect, onMount, Show } from 'solid-js'
 //components
 import { NamePopup } from '@/components/NamePopup.tsx'
 import { TopBar } from '@/components/TopBar.tsx'
 import { SideBar } from '@/components/SideBar.tsx'
 import { MainContent } from '@/components/MainContent.tsx'
 import { ContextMenu } from '@/components/ContextMenu.tsx'
-import { IconContext } from '@phosphor-icons/react'
-import { CopyPopup } from '@/components/CopyPopup.tsx'
 import { TitleBar } from '@/components/TitleBar'
 import { ConfigScreen } from '@/components/ConfigScreen'
 import { BottomBar } from '@/components/BottomBar'
 import { WarningPopup } from '@/components/WarningPopup'
-
+import { WorkspaceBar } from '@/components/WorkspaceBar'
 //stores
-import { useNavigationStore } from '@/stores/NavigationStore.ts'
 import { useConfigStore } from '@/stores/ConfigStore'
+import { useContextMenuStore } from './stores/ContextMenuStore'
+import { usePopupControl } from './stores/PopupControl'
+import { useNavigationStore } from './stores/NavigationStore'
 //hooks
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts'
+import { invoke } from '@tauri-apps/api/core'
 
 function FileExplorer() {
-  const goNextPath = useNavigationStore((state) => state.goNextPath)
-  const goBackPath = useNavigationStore((state) => state.goBackPath)
-  const config = useConfigStore((state) => state.config)
-  useEffect(() => {
+  const conf = useConfigStore()
+  const cont = useContextMenuStore()
+  const pop = usePopupControl()
+  const nav = useNavigationStore()
+  createEffect(() => {
     {
-      document.documentElement.setAttribute('data-theme', config.theme)
+      document.documentElement.setAttribute('data-theme', conf.config.theme)
     }
-  }, [config.theme])
+  }, [conf.config.theme])
 
   useKeyboardShortcuts()
 
+  onMount(() => {
+    function disableContextMenu(e: MouseEvent) {
+      return e.preventDefault()
+    }
+    window.addEventListener('contextmenu', disableContextMenu)
+    return () => window.removeEventListener('contextmenu', disableContextMenu)
+  })
+  onMount(() => {
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        cont.setShowMenu(false)
+        pop.setWarningPopup(false)
+        conf.toggleShowConfig(false)
+        cont.closePopup()
+      }
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  })
+
+  onMount(() => {
+    invoke<string>('get_home').then((homePath) => {
+      nav.setHome(homePath)
+      nav.goPath(homePath)
+    })
+  })
+
   return (
-    <main className="flex h-screen flex-col bg-[var(--bg-secondary)] text-[var(--text-primary)]">
-      <IconContext.Provider value={{ size: 16, color: 'var(--text-primary)', weight: `regular` }}>
-        <div data-info="vertical flex" className="flex flex-none flex-col">
+    <main class="flex h-screen flex-col bg-[var(--bg-secondary)] text-[var(--text-primary)]">
+        <div class="flex flex-none flex-col">
           <TitleBar />
           <TopBar />
+          <div class="h-px w-full shrink-0 bg-[var(--border-primary)]" /> {/*Divisor */}
         </div>
-        <div data-info="horizontal flex" className="flex flex-1 flex-row overflow-hidden">
-          <div className="flex flex-col">
-            <SideBar />
-          </div>
-          {/* <div className="ml-0.5 h-full w-[1px] bg-[var(--border-primary)]" /> */}
-          <MainContent />
-          <ConfigScreen />
+        <div class="flex h-full w-full flex-row overflow-hidden">
           <SideBar />
+          <div class="h-full w-px shrink-0 bg-[var(--border-primary)]" /> {/*Divisor */}
+          <ConfigScreen />
+          <div class="flex h-full w-full flex-col overflow-hidden">
+            <Show when={conf.workspaceActive}>
+              <WorkspaceBar />
+            </Show>
+            <MainContent />
+          </div>
         </div>
+        <div class="h-px w-full shrink-0 bg-[var(--border-primary)]" /> {/*Divisor */}
         <BottomBar />
         <ContextMenu />
         <NamePopup />
-        <CopyPopup initialX={300} initialY={200} />
         <WarningPopup />
-      </IconContext.Provider>
     </main>
   )
 }

@@ -1,279 +1,275 @@
-import { JSX, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { useContextMenuStore } from '../stores/ContextMenuStore.ts';
-import { useConfigStore } from '../stores/ConfigStore.ts';
-import { useFileStore } from '../stores/FileStore.ts';
-import { useNavigationStore } from '@/stores/NavigationStore.ts';
-import { usePopupControl } from '@/stores/PopupControl.ts';
-import {
-  CopyIcon,
-  CaretRightIcon,
-  PenNibIcon,
-  ClipboardIcon,
-  TrashIcon,
-  EyeIcon,
-  TerminalWindowIcon,
-  FolderSimpleIcon,
-  EyeSlashIcon,
-  ScissorsIcon,
-  FileIcon,
-} from '@phosphor-icons/react';
+import { For, Show, createMemo } from 'solid-js'
+import { invoke } from '@tauri-apps/api/core'
+import { useContextMenuStore } from '../stores/ContextMenuStore.ts'
+import { useConfigStore } from '../stores/ConfigStore.ts'
+import { useFileStore } from '../stores/FileStore.ts'
+import { useNavigationStore } from '@/stores/NavigationStore.ts'
+import { usePopupControl } from '@/stores/PopupControl.ts'
+import { useSidebarItemsStore } from '@/stores/SidebarItemsStore.ts'
+//icons
+import Copy from '~icons/ph/copy'
+import CaretRight from '~icons/ph/caret-right'
+import PenNib from '~icons/ph/pen-nib'
+import Clipboard from '~icons/ph/clipboard'
+import Trash from '~icons/ph/trash'
+import TerminalWindow from '~icons/ph/terminal-window'
+import FolderSimple from '~icons/ph/folder-simple'
+import Scissors from '~icons/ph/scissors'
+import File from '~icons/ph/file'
+import ArchiveBox from '~icons/ph/archive-box'
+import Archive from '~icons/ph/archive'
 
-type MenuActions = {
-  label: string;
-  icon?: JSX.Element | null;
-  onClick?: () => void;
-  onMouseEnter: () => void;
-  disabled: boolean;
-};
 
 export function ContextMenu() {
-  const showMenu = useContextMenuStore((state) => state.showMenu);
-  const showDirMenu = useContextMenuStore((state) => state.showDirMenu);
-  const menuPos = useContextMenuStore((state) => state.menuPos);
-  const reload = useFileStore((state) => state.reload);
-  const selectedFiles = useFileStore((state) => state.selectedFiles);
-  const config = useConfigStore((state) => state.config);
-  const setShowMenu = useContextMenuStore((state) => state.setShowMenu);
-  const setShowDirMenu = useContextMenuStore((state) => state.setShowDirMenu);
-  const setReload = useFileStore((state) => state.setReload);
-  const setCopySelected = useFileStore((state) => state.setCopySelected);
-  const copySelected = useFileStore((state) => state.copySelected);
-  const setCutSelected = useFileStore((state) => state.setCutSelected);
-  const cutSelected = useFileStore((state) => state.cutSelected);
-  const openPopup = useContextMenuStore((state) => state.openPopup);
-  const setOnEnter = useContextMenuStore((state) => state.setOnEnter);
-  const toggleHiddenFiles = useConfigStore((state) => state.toggleHiddenFiles);
-  const pasteDir = useContextMenuStore((state) => state.pasteDir);
-  const moveToTrash = useContextMenuStore((state) => state.moveToTrash);
-  const moveDir = useContextMenuStore((state) => state.moveDir);
-  const makeDir = useContextMenuStore((state) => state.makeDir);
-  const makeFile = useContextMenuStore((state) => state.makeFile);
-  const handleRename = useContextMenuStore((state) => state.handleRename);
-  const path = useNavigationStore((state) => state.path);
-  const workspaces = useNavigationStore((state) => state.workspaces);
-  const actualWorkspace = useNavigationStore((state) => state.actualWorkspace);
-  const home = useNavigationStore((state) => state.home);
-  const setWarningPopup = usePopupControl((state) => state.setWarningPopup);
+  const fil = useFileStore()
+  const cont = useContextMenuStore()
+  const nav = useNavigationStore()
+  const pop = usePopupControl()
+  const sidebar = useSidebarItemsStore()
 
-  const btnList: MenuActions[] = [
+  const disabledPrefixes = [
+    "/", "/bin", "/boot", "/dev", "/etc", "/home", "/lib", "/lib64",
+    "/lost+found", "/mnt", "/opt", "/proc", "/root", "/run",
+    "/sbin", "/srv", "/sys", "/tmp", "/usr", "/var",
+  ]
+
+  function isDisabledPath(path: string): boolean {
+    if (!path) return false
+    if (path.startsWith("/home/") || path.startsWith("/run/media/" + fil.lastPathSegment(nav.home) + "/")) return false
+    return disabledPrefixes.some((prefix) =>
+      prefix === "/" ? path === "/" : path === prefix || path.startsWith(prefix + "/")
+    )
+  }
+
+  const btnList = createMemo(() => [
     {
       label: 'Make New',
-      icon: <CaretRightIcon weight="light" />,
+      icon: <CaretRight />,
       onClick: undefined,
-      onMouseEnter: () => setShowDirMenu(true),
-      disabled: false,
+      onMouseEnter: () => cont.setShowDirMenu(true),
+      disabled: isDisabledPath(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
+      visible: !fil.placeIsSelected && (
+        fil.selectedFiles.length === 0 ||
+        (fil.selectedFiles.length === 1 &&
+          fil.files.find(f => f.path === fil.selectedFiles[0])?.ftype === "folder")
+      ),
     },
     {
       label: 'Rename',
-      icon: <PenNibIcon weight="light" />,
+      icon: <PenNib />,
       onClick: () => {
-        setOnEnter(handleRename);
-        openPopup();
+        cont.openRenamePopup()
       },
-      onMouseEnter: () => setShowDirMenu(false),
-      disabled: false,
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
       label: 'Copy',
-      icon: <CopyIcon weight="light" />,
+      icon: <Copy />,
       onClick: () => {
-        setCopySelected(selectedFiles);
+        fil.setCopySelected(fil.selectedFiles)
       },
-      onMouseEnter: () => setShowDirMenu(false),
-      disabled: false,
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
       label: 'Cut',
-      icon: <ScissorsIcon weight="light" />,
+      icon: <Scissors />,
       onClick: () => {
-        setCutSelected(selectedFiles);
+        fil.setCutSelected(fil.selectedFiles)
       },
-      onMouseEnter: () => setShowDirMenu(false),
-      disabled: false,
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
       label: 'Paste',
-      icon: <ClipboardIcon weight="light" />,
+      icon: <Clipboard />,
       onClick: async () => {
-        if (cutSelected.length > 0) {
-          moveDir();
+        if (fil.cutSelected.length > 0) {
+          cont.moveDir()
         } else {
-          pasteDir();
+          cont.pasteDir()
         }
       },
-      onMouseEnter: () => setShowDirMenu(false),
-      disabled: copySelected.length === 0 && cutSelected.length === 0,
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: isDisabledPath(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
+      visible: !fil.placeIsSelected && (fil.copySelected.length || fil.cutSelected.length),
     },
     {
       label:
-        workspaces[actualWorkspace] === home + '/.local/share/Trash/files'
+        nav.workspaces[nav.actualWorkspace] === nav.home + '/.local/share/Trash/files'
           ? 'Delete'
           : 'Move To Trash',
-      icon: <TrashIcon weight="light" />,
+      icon: <Trash />,
       onClick: () => {
-        if (
-          workspaces[actualWorkspace] ===
-          home + '/.local/share/Trash/files'
-        ) {
-          setWarningPopup(true);
-          //del() in warningPopup
-        } else {
-          moveToTrash();
+        if (fil.selectedFiles.length > 0) {
+          if (nav.workspaces[nav.actualWorkspace] === nav.home + '/.local/share/Trash/files') {
+            pop.setWarningPopup(true)
+            //delele() in warningPopup
+          } else {
+            cont.moveToTrash()
+          }
         }
       },
-      onMouseEnter: () => setShowDirMenu(false),
-      disabled: false,
-    },
-    {
-      label: config.toggle_hidden_files
-        ? 'Hide Hidden Files'
-        : 'Show Hidden Files',
-      icon: config.toggle_hidden_files ? (
-        <EyeSlashIcon weight="light" />
-      ) : (
-        <EyeIcon weight="light" />
-      ),
-      onClick: () => {
-        toggleHiddenFiles();
-        setReload(!reload);
-      },
-      onMouseEnter: () => setShowDirMenu(false),
-      disabled: false,
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
     {
       label: 'Open Terminal',
-      icon: <TerminalWindowIcon weight="light" />,
+      icon: <TerminalWindow />,
       onClick: async () => {
         try {
-          await invoke('open_terminal', { path });
+          await invoke('open_terminal', { path: fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path })
         } catch (error) {
-          console.log(error);
+          console.log(error)
         }
       },
-      onMouseEnter: () => setShowDirMenu(false),
+      onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
+      visible: true,
     },
-  ];
-
-  useEffect(() => {
-    function disableContextMenu(e: MouseEvent) {
-      return e.preventDefault();
-    }
-    window.addEventListener('contextmenu', disableContextMenu);
-    return () => window.removeEventListener('contextmenu', disableContextMenu);
-  }, []);
-  useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') setShowMenu(false);
-    }
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, []);
-
-  useEffect(() => {
-    console.log(selectedFiles);
-    console.log(copySelected);
-  }, [selectedFiles, copySelected]);
+    {
+      label: 'Compress To Zip',
+      icon: <ArchiveBox />,
+      onClick: () => {
+        cont.setOnEnter(cont.compressToZip)
+        cont.openPopup()
+      },
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
+    },
+    {
+      label: 'Extract Zip Here',
+      icon: <Archive />,
+      onClick: () => {
+        cont.extractZip()
+      },
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
+    },
+    {
+      label: 'Add To Places',
+      icon: <Archive />,
+      onClick: () => sidebar.addItem(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: false,
+      visible: !fil.placeIsSelected,
+    },
+    {
+      label: 'Remove From Places',
+      icon: <Archive />,
+      onClick: () => sidebar.removeItem(fil.lastPathSegment(fil.selectedFiles[0])),
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: false,
+      visible: fil.placeIsSelected,
+    },
+  ])
 
   return (
-    <>
-      {showMenu && menuPos && (
-        <>
-          <div
-            data-component="Menu-Overlay"
-            className="fixed inset-0 w-screen h-screen bg-transparent z-40"
-            onMouseDown={(e) => {
-              if (e.button === 2) {
-                return;
-              } else setShowMenu(false);
-              setShowDirMenu(false);
-            }}
-            onContextMenu={() => {
-              setShowMenu(false);
-              setShowDirMenu(false);
-            }}
-          />
-          <div
-            data-component="Context-Menu"
-            className="w-[250px] flex flex-col absolute rounded-[8px] p-[4px] z-50 shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[var(--bg-tertiary)] border border-[var(--border-secondary)]"
-            style={{
-              top: Math.min(menuPos.y - 0, window.innerHeight - 275),
-              left: Math.min(menuPos.x + 3, window.innerWidth - 260),
-            }}
-            onClick={() => {
-              setShowMenu(false);
-              setShowDirMenu(false);
-            }}
-          >
-            {btnList.map((item) => (
-              <div key={item.label}>
-                {['Move To Trash', 'Delete'].includes(item.label) && (
-                  <>
-                    <div className="h-[1px] w-[100%] bg-[var(--text-muted)]" />
-                    <div className="h-1 " />
-                  </>
-                )}
-                <button
-                  className={`flex items-center h-[25px] w-full text-[12px] rounded-md ${
-                    item.disabled
-                      ? 'text-[var(--text-muted)]'
-                      : 'hover:bg-[var(--bg-hover-secondary)]'
+    <Show when={cont.showMenu && cont.menuPos}>
+      <div
+        data-component="Menu-Overlay"
+        class="fixed inset-0 z-40 h-screen w-screen bg-transparent"
+        onMouseDown={(e) => {
+          if (e.button === 2) {
+            fil.resetSelected()
+            fil.resetInterval()
+            return
+          }
+          cont.setShowMenu(false)
+          cont.setShowDirMenu(false)
+          fil.resetSelected()
+          fil.resetInterval()
+          fil.setPlaceIsSelected(false)
+        }}
+        onContextMenu={() => {
+          cont.setShowMenu(false)
+          cont.setShowDirMenu(false)
+
+        }}
+      />
+      <div
+        class="absolute z-50 flex w-64 flex-col rounded-lg border border-(--border-primary) bg-(--bg-modal) p-1 shadow-(--shadow-md)"
+        style={{
+          top: `${Math.min(cont.menuPos!.y - 0, window.innerHeight - 370)}px`,
+          left: `${Math.min(cont.menuPos!.x + 3, window.innerWidth - 260)}px`,
+        }}
+        onClick={() => {
+          cont.setShowMenu(false)
+          cont.setShowDirMenu(false)
+        }}
+      >
+        <For each={btnList()}>
+          {(item) => (
+            <>
+              <Show when={item.visible}>
+                <Show when={['Move To Trash', 'Delete',].includes(item.label)}>
+                  <div class="h-px w-full bg-(--border-secondary)" />
+                  <div class="h-1" />
+                </Show>
+
+                <button class={`flex h-7 w-full items-center rounded-sm text-[0.75rem] gap-1 ${
+                  item.disabled ? 'text-(--text-muted)' : 'hover:bg-(--bg-card-hover)'
                   }`}
-                  onClick={item.onClick}
-                  onMouseEnter={item.onMouseEnter}
+                  onClick={() => {
+                    fil.setPlaceIsSelected(false)
+                    item.onClick?.()
+                  }}
+                  onMouseEnter={() => {if (!item.disabled) item.onMouseEnter?.()}}
                   disabled={item.disabled}
                 >
-                  <div className="flex flex-row items-center pl-2.5 gap-1">
-                    {item.icon} {item.label}
-                  </div>
+                  <div class="pl-2.5"> {item.icon} </div> {item.label}
                 </button>
-                {['Move To Trash', 'Delete'].includes(item.label) && (
-                  <>
-                    <div className="h-1" />
-                    <div className="h-[1px] w-[100%] bg-[var(--text-muted)]" />
-                  </>
-                )}
+
+                <Show when={['Move To Trash', 'Delete'].includes(item.label)}>
+                  <div class="h-1" />
+                  <div class="h-px w-full bg-(--border-secondary)" />
+                </Show>
+              </Show>
+            </>
+          )}
+        </For>
+        <Show when={cont.showDirMenu && cont.menuPos && cont.showMenu}>
+          <div
+            class="absolute z-50 flex flex-col rounded-lg border border-(--border-primary) bg-(--bg-modal) p-1 shadow-(--shadow-md)"
+            style={{
+              top: '0px',
+              left: `${cont.menuPos!.x > window.innerWidth - 380 ? -122 : 256}px`,
+              'z-index': '50',
+              width: '120px',
+            }}
+          >
+            <button
+              class="flex h-7 w-full items-center rounded-sm text-[0.75rem] hover:bg-(--bg-card-hover)"
+              onClick={() => {
+                cont.setOnEnter(cont.makeDir)
+                cont.openPopup()
+              }}
+            >
+              <div class="flex flex-row items-center gap-1 pl-2.5">
+                <FolderSimple /> Folder
               </div>
-            ))}
-            {/*===========================New_folder_menu===========================*/}
-            {showDirMenu && menuPos && showMenu && (
-              <div
-                className="w-[250px] flex flex-col absolute rounded-[8px] p-[4px] z-50 shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[var(--bg-tertiary)] border border-[var(--border-secondary)]"
-                style={{
-                  top: 0,
-                  left: menuPos.x > window.innerWidth - 380 ? -125 : 252,
-                  zIndex: 1001,
-                  width: 120,
-                }}
-              >
-                <div
-                  className="flex items-center h-[25px] w-full  text-[12px] rounded-md hover:bg-[var(--bg-hover-secondary)]"
-                  onClick={() => {
-                    setOnEnter(makeDir);
-                    openPopup();
-                  }}
-                >
-                  <div className="flex flex-row items-center pl-2.5 gap-1">
-                    <FolderSimpleIcon /> Folder
-                  </div>
-                </div>
-                <div
-                  className="flex items-center h-[25px] w-full  text-[12px] rounded-md hover:bg-[var(--bg-hover-secondary)]"
-                  onClick={() => {
-                    setOnEnter(makeFile);
-                    openPopup();
-                  }}
-                >
-                  <div className="flex flex-row items-center pl-2.5 gap-1">
-                    <FileIcon /> File
-                  </div>
-                </div>
+            </button>
+            <button
+              class="flex h-7 w-full items-center rounded-sm text-[0.75rem] hover:bg-(--bg-card-hover)"
+              onClick={() => {
+                cont.setOnEnter(cont.makeFile)
+                cont.openPopup()
+              }}
+            >
+              <div class="flex flex-row items-center gap-1 pl-2.5">
+                <File /> File
               </div>
-            )}
+            </button>
           </div>
-        </>
-      )}
-    </>
-  );
+        </Show>
+      </div>
+    </Show>
+  )
 }

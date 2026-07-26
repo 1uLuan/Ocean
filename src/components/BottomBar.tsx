@@ -1,24 +1,26 @@
-import { GearIcon } from '@phosphor-icons/react'
-import { useConfigStore } from '@/stores/ConfigStore'
-import { WorkSpaces } from '@/components/WorkSpaces'
+import { For, createSignal } from 'solid-js'
+import { CompressPopup } from './CompressPopup'
+import { CopyPopup } from './CopyPopup'
+import { usePopupControl } from '@/stores/PopupControl'
+
+const pop = usePopupControl()
 
 export function BottomBar() {
-  const toggleShowConfig = useConfigStore((state) => state.toggleShowConfig)
-  const configIsOpen = useConfigStore((state) => state.configIsOpen)
+  const [active, setActive] = createSignal(false)
   return (
-    <>
-      <div className="h-[1px] w-full" />
-      <div className="flex h-6 w-full flex-row items-center pl-2">
-        <button
-          className="items center flex w-4 justify-center rounded-full duration-200 hover:bg-[var(--bg-hover-primary)]"
-          onClick={() => toggleShowConfig(!configIsOpen)}
+    <div class="flex h-8 w-full flex-row items-center justify-center">
+      <div class="h-full w-full" />
+      <div class="relative h-full w-full" onclick={() => setActive(!active())}>
+        <div
+          class={`absolute -bottom-97.5 flex h-96 w-full flex-col overflow-scroll rounded-tl-md rounded-tr-md bg-(--bg-secondary) p-px transition-transform duration-150 ease-in-out ${active() ? '-translate-y-105.5 border-t border-r border-l border-(--border-primary)' : 'translate-y-0'}`}
         >
-          <GearIcon />
-        </button>
-        <div className="flex h-full w-full flex-row items-center justify-center">
-          <WorkSpaces />
+          <For each={pop.compressions}>
+            {(id) => <CompressPopup opId={id} onCancel={pop.cancelCompress} />}
+          </For>
+          <For each={pop.copies}>{(id) => <CopyPopup copyId={id} onCancel={pop.cancelCopy} />}</For>
         </div>
       </div>
-    </>
+      <div class="h-full w-full" />
+    </div>
   )
 }

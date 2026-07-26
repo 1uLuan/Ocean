@@ -1,42 +1,52 @@
-import { useFileStore } from '@/stores/FileStore';
-import { useEffect } from 'react';
-import { usePopupControl } from '@/stores/PopupControl';
-import { useContextMenuStore } from '@/stores/ContextMenuStore';
-export function WarningPopup() {
-  const getPathName = useFileStore((state) => state.getPathName);
-  const pathName = useFileStore((state) => state.pathName);
-  const WarningPopup = usePopupControl((state) => state.warningPopup);
-  const setWarningPopup = usePopupControl((state) => state.setWarningPopup);
-  const del = useContextMenuStore((state) => state.delete);
+import { For, createEffect, Show } from 'solid-js'
+import { useFileStore } from '@/stores/FileStore'
+import { usePopupControl } from '@/stores/PopupControl'
+import { useContextMenuStore } from '@/stores/ContextMenuStore'
+import useSmoothScroll from '@/hooks/useSmoothScroll'
+//icons
+import Warning from '~icons/ph/warning-fill'
+import Trash from '~icons/ph/trash'
 
-  useEffect(() => {
-    getPathName();
-  }, [WarningPopup]);
+export function WarningPopup() {
+  const fil = useFileStore()
+  const pop = usePopupControl()
+  const cont = useContextMenuStore()
+
+  createEffect(() => {
+    fil.getPathName(fil.selectedFiles)
+  })
+
+  let listEl: HTMLDivElement | undefined
+  useSmoothScroll(() => listEl, { speed: 1.2, smoothness: 0.2 })
 
   return (
     <>
-      {WarningPopup && (
-        <div className="absolute w-full h-full z-40 grid place-items-center">
-          <div className="flex flex-col w-80 h-96 z-50 p-1 gap-1 text-[0.9rem] bg-[var(--bg-tertiary)] rounded-xl">
-            <div className="flex-1">Do You Really Want Delete This Item?</div>
-            <ul className="flex-3 p-1 bg-[var(--bg-secondary)] border border-zinc-900 rounded-xl">
-              {pathName.map((name) => (
-                <li>{name}</li>
-              ))}
-            </ul>
-            <div className="flex flex-row justify-between p-1">
+      {pop.warningPopup && (
+        <div class="absolute z-40 grid h-full w-full place-items-center">
+          <div class="z-50 flex h-80 w-80 flex-col gap-1 rounded-xl border border-(--border-primary) bg-(--bg-modal) p-1 text-[0.9rem]">
+            <div class="flex w-full flex-row items-center gap-1">
+              <Warning class='size-8' style={{color: 'var(--accent-warning)'}} />
+              <Show when={fil.pathName.length == 1}>Do You Really Want Delete This Item?</Show>
+              <Show when={fil.pathName.length > 1}>Do You Really Want Delete These Items?</Show>
+            </div>
+            <div
+              ref={listEl}
+              class="flex-3 overflow-auto rounded-xl border border-(--border-primary) bg-(--bg-secondary) p-1"
+            >
+              <For each={fil.pathName}>{(name) => <div class="truncate">{name}</div>}</For>
+            </div>
+            <div class="flex flex-row justify-between p-1">
               <button
-                className="w-30 h-10 rounded-xl bg-[var(--button-bg)] hover:bg-red-600"
+                class="flex h-10 w-full flex-row items-center gap-0.5 rounded-xl bg-(--button-bg) hover:bg-(--bg-hover-secondary)"
                 onClick={() => {
-                  del();
-                  setWarningPopup(false);
+                  ;(cont.delete(), pop.setWarningPopup(false))
                 }}
               >
-                Delete
+                <Trash class='size-5' style={{color: 'var(--accent-danger)'}} /> Delete Permanetly
               </button>
               <button
-                className="w-30 h-10 rounded-xl bg-[var(--button-bg)] hover:bg-[var(--button-hover)]"
-                onClick={() => setWarningPopup(false)}
+                class="h-10 w-full rounded-xl bg-(--button-bg) hover:bg-(--bg-hover-secondary)"
+                onClick={() => pop.setWarningPopup(false)}
               >
                 Cancel
               </button>
@@ -45,5 +55,5 @@ export function WarningPopup() {
         </div>
       )}
     </>
-  );
+  )
 }

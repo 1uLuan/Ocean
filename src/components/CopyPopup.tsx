@@ -1,122 +1,96 @@
-import { useEffect, useRef, useState } from 'react';
-import { listen } from '@tauri-apps/api/event';
-import { useCopyPopupStore } from '@/stores/CopyPopup';
-import { TypeCopyProgress } from '@/stores/CopyPopup';
-import { XIcon } from '@phosphor-icons/react';
+import { onMount, onCleanup, createSignal, createResource, Show } from 'solid-js'
+import { listen, UnlistenFn } from '@tauri-apps/api/event'
+import  X  from '~icons/ph/x'
+import { invoke } from '@tauri-apps/api/core'
 
-export function CopyPopup({  initialX = window.innerWidth / 2 - 200,
-  initialY = window.innerHeight / 2 - 150}) {
-  const copyProgress = useCopyPopupStore((state) => state.copyProgress);
-  const progress = useCopyPopupStore((state) => state.progress);
-  const fileOnCopy = useCopyPopupStore((state) => state.fileOnCopy);
-  const elapsed_secs = useCopyPopupStore((state) => state.elapsed_secs);
-  const setProgress = useCopyPopupStore((state) => state.setProgress);
-  const setFileOnCopy = useCopyPopupStore((state) => state.setFileOnCopy);
-  const setElapsed_secs = useCopyPopupStore((state) => state.setElapsed_secs);
-  const cancelCopy = useCopyPopupStore((state) => state.cancelCopy);
+type TypeCopyProgress = {
+  copy_id: string
+  current: number
+  file: string
+  percent: number
+  file_percent: number
+  total: number
+  elapsed_secs: number
+  copied_bytes: number
+  total_bytes: number
+}
 
-  useEffect(() => {
-    const unlistenProgress = listen('copy_progress', (event) => {
-      const data = event.payload as TypeCopyProgress;
-      setProgress(data.file_percent);
-      setElapsed_secs(data.elapsed_secs);
-      setFileOnCopy(data.file);
-    });
-    return () => {
-      unlistenProgress.then((f) => f());
-    };
-  }, []);
+type Props = {
+  copyId: string
+  onCancel: (id: string) => void
+}
 
-  const [position, setPosition] = useState({ x: initialX, y: initialY });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const popupRef = useRef<HTMLDivElement>(null);
+export function CopyPopup(props: Props) {
+  const [file, setFile] = createSignal('')
+  const [progress, setProgress] = createSignal(0)
+  const [totalBytes, setTotalBytes] = createSignal(0)
+  const [copiedBytes, setCopiedBytes] = createSignal(0)
+  const [total, setTotal] = createSignal(0)
+  const [current, setCurrent] = createSignal(0)
 
+  onMount(() => {
+    let unlisten: UnlistenFn | undefined
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
+    listen<TypeCopyProgress>('copy_progress', (event) => {
+      const data = event.payload
+      if (data.copy_id !== props.copyId) return
+      setFile(data.file)
+      setProgress(data.file_percent)
+      setTotalBytes(data.total_bytes)
+      setCopiedBytes(data.copied_bytes)
+      setTotal(data.total)
+      setCurrent(data.current)
+    }).then((fn) => (unlisten = fn))
 
-      const newX = e.clientX - dragOffset.x;
-      const newY = e.clientY - dragOffset.y;
+    onCleanup(() => unlisten?.())
+  })
 
-      // Limites da tela
-      const maxX = window.innerWidth - (popupRef.current?.offsetWidth || 0);
-      const maxY = window.innerHeight - (popupRef.current?.offsetHeight || 0);
-
-      setPosition({
-        x: Math.max(0, Math.min(newX, maxX)),
-        y: Math.max(0, Math.min(newY, maxY))
-      });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, dragOffset]);
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!popupRef.current) return;
-
-    const rect = popupRef.current.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
-    setIsDragging(true);
-  };
+  const [formattedTotal] = createResource(totalBytes, (bytes: number) =>
+    invoke<string>('format_size', { bytes })
+  )
+  const [formattedCopied] = createResource(copiedBytes, (bytes: number) =>
+    invoke<string>('format_size', { bytes })
+  )
 
   return (
-    <>
-      {copyProgress && (
-        <div 
-          ref={popupRef}
-          className="h-40 w-75 absolute rounded-[8px] p-[4px] z-[1000] bg-[var(--bg-tertiary)] border border-[var(--border-secondary)]"
-          onMouseDown={handleMouseDown}
-          style={{
-            left: `${position.x}px`,
-            top: `${position.y}px`,
-            cursor: isDragging ? 'grabbing' : 'default'
-        }}
+    <div class="flex h-40 w-full shrink-0 flex-col rounded-md border border-(--border-secondary) bg-(--bg-card) p-1">
+      {/*top*/}
+      <div class="flex flex-row items-start justify-between">
+        <div class="w-8/12 truncate rounded-sm border border-(--border-secondary) bg-(--bg-secondary) pl-1 text-[0.75rem]">
+          {file()}
+        </div>
+        <button
+          class="transition-color flex h-7 w-7 items-center justify-center rounded-sm border border-(--border-secondary) duration-150 hover:bg-(--accent-danger)"
+          onClick={() => props.onCancel(props.copyId)}
         >
-          <div className="flex items-start justify-between">
-            <div className="text-[12px] w-auto bg-[var(--bg-secondary)] rounded-[4px] pr-2 pl-2 border border-[var(--border-secondary)]">
-              {fileOnCopy}
-            </div>
-            <button
-              className="flex items-center justify-center w-[26px] h-[26px] bg-[var(--bg-tertiary)] hover:bg-red-700 transition-color duration-200 rounded-md border border-[var(--border-secondary)] "
-              onClick={() => cancelCopy()}
-            >
-              <XIcon weight="light" size={14} />
-            </button>
-          </div>
-          <div className="flex flex-col justify-end-safe h-[73%]">
-            <div className="flex flex-row gap-10">
-              <div className="text-[11px]">{Math.floor(progress)}%</div>
-              <div className="text-[11px]">
-                Tempo: {Math.floor(elapsed_secs)}s
-              </div>
-            </div>
-            <div className=" flex gap-1 trasparent h-[6px] w-full overflow-hidden">
-              <div
-                className="bg-blue-500 rounded-full h-[100%] transition-[width] ease-in-out "
-                style={{ width: Math.floor(progress) + '%' }}
-              />
-              <div className="bg-red-500 rounded-full flex-1 h-[100%] transition-[width] ease-in-out " />
+          <X class='size-3' />
+        </button>
+      </div>
+      {/*middle*/}
+      <div class="flex flex-row gap-2">
+        <Show when={total() > 1}>
+          <div class="pl-0.5 text-[0.70rem]">Current: {current()}</div>
+          <div class="pl-0.5 text-[0.70rem]">Total: {total()}</div>
+        </Show>
+      </div>
+      {/*bottom*/}
+      <div class="flex h-full w-full flex-col justify-end">
+        <div class="flex flex-row pl-1">
+          <div class="text-[0.75rem]">{Math.floor(progress())}%</div>
+          <div class="flex w-full flex-row justify-end">
+            <div class="mr-1 text-[0.75rem]">
+              {formattedCopied()} De {formattedTotal()}
             </div>
           </div>
         </div>
-      )}
-    </>
-  );
+        <div class="trasparent flex h-1.5 w-full flex-row gap-0.5 overflow-hidden">
+          <div
+            class="h-full rounded-full bg-(--accent-glow) transition-[width] ease-in-out"
+            style={{ width: Math.floor(progress()) + '%' }}
+          />
+          <div class="h-full flex-1 rounded-full bg-(--bg-primary) transition-[width] ease-in-out" />
+        </div>
+      </div>
+    </div>
+  )
 }

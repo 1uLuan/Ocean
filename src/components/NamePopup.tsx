@@ -1,31 +1,28 @@
-import { useContextMenuStore } from '@/stores/ContextMenuStore.ts';
+import { useContextMenuStore } from '@/stores/ContextMenuStore.ts'
+import { Show } from 'solid-js'
 
 export function NamePopup() {
-  const onEnter = useContextMenuStore((state) => state.onEnter);
-  const text = useContextMenuStore((state) => state.text);
-  const closePopup = useContextMenuStore((state) => state.closePopup);
-  const isOpen = useContextMenuStore((state) => state.isOpen);
-  const setText = useContextMenuStore((state) => state.setText);
+  const cont = useContextMenuStore()
 
   return (
-    isOpen && (
-      <div className="absolute flex flex-col items-center top-[30%] left-[40%] w-[200px] h-[70px] rounded-[12px] bg-[var(--bg-tertiary)] pl-4 pr-4">
-        <div className="text-left w-[100%] text-[12px]">Digite O Nome:</div>
-        <textarea
-          className="bg-[var(--bg-secondary)] w-[190px] h-[40px] rounded-[12px] resize-none text-[14px] text-center border border-[var(--border-primary)] outline-none"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(k) => {
-            if (k.key === 'Enter') {
-              onEnter?.();
-            }
-            if (k.key === 'Escape') {
-              closePopup();
-            }
-          }}
-          autoFocus
-        ></textarea>
+    <Show when={cont.isOpen}>
+      <div class="absolute grid h-full w-full place-items-center">
+        <div class="flex h-30 w-62 flex-col items-center rounded-lg border border-(--border-primary) bg-(--bg-modal) p-3 hover:border-(--bg-focus-ring)">
+          <div class="w-full text-[0.8rem]">Digite O Nome:</div>
+          <textarea
+            class="mt-auto h-7 w-full resize-none overflow-y-hidden rounded-lg bg-(--bg-input) text-center text-[0.9rem] whitespace-nowrap outline-none focus:border focus:border-(--border-secondary)"
+            ref={(el) => setTimeout(() => el.focus(), 0)}
+            value={cont.text}
+            onInput={(e) => cont.setText(e.target.value)}
+            onKeyDown={(k) => {
+              if (k.key === 'Enter') {
+                cont.onEnter?.()
+                cont.closePopup()
+              }
+            }}
+          ></textarea>
+        </div>
       </div>
-    )
-  );
+    </Show>
+  )
 }

@@ -1,83 +1,130 @@
 import { invoke } from '@tauri-apps/api/core'
-import { create } from 'zustand'
+import { createStore } from 'solid-js/store'
+import { useConfigStore } from './ConfigStore'
 
-type NavigationStore = {
+const conf = useConfigStore()
+
+type NavigationState = {
   path: string
-  setPath: (path: string) => void
   nextPath: string
-  setNextPath: (nextPath: string) => void
   home: string
-  setHome: (home: string) => void
-
-  //workspaces variables
-  actualWorkspace: 0 | 1 | 2 | 3
-  setActualWorkspace: (ws: 0 | 1 | 2 | 3) => void
-  workspaces: Record<0 | 1 | 2 | 3, string>
-  setWorkspacePath: (ws: 0 | 1 | 2 | 3) => void
-
-  //==========funções===========
-  goPath: (path: string) => void
-  getCurrentWorkspacePath: () => string
-  goBackPath: () => Promise<void>
-  goNextPath: () => Promise<void>
+  actualWorkspace: number
+  workspaces: string[]
 }
 
-export const useNavigationStore = create<NavigationStore>((set, get) => ({
+const [state, setState] = createStore<NavigationState>({
   path: '',
   nextPath: '',
   home: '',
   actualWorkspace: 0,
-  workspaces: {
-    0: '',
-    1: '',
-    2: '',
-    3: '',
-  },
+  workspaces: [''],
+})
 
-  setPath: (np: string) => set({ path: np }),
-  setNextPath: (nnp: string) => set({ nextPath: nnp }),
-  setHome: (nh: string) => set({ home: nh }),
-  setActualWorkspace: (ws: 0 | 1 | 2 | 3) => {
-    const { workspaces } = get()
-    // Ao trocar workspace, carrega o path salvo
-    set({
-      actualWorkspace: ws,
-      path: workspaces[ws] || get().home,
-    })
-  },
-  setWorkspacePath: (ws: 0 | 1 | 2 | 3) => {
-    const { workspaces } = get()
-    set({ workspaces: { ...workspaces, [ws]: get().home } })
-  },
+// ações separadas do estado
+function setPath(path: string) {
+  setState({ path })
+}
 
-  goPath: (path: string) => {
-    const { actualWorkspace, workspaces } = get()
-    // Atualiza o path do workspace atual e o path global
-    set({
-      workspaces: {
-        ...workspaces,
-        [actualWorkspace]: path,
-      },
-      path,
-    })
-  },
+function setNextPath(nextPath: string) {
+  setState({ nextPath })
+}
 
-  getCurrentWorkspacePath: () => {
-    const { actualWorkspace, workspaces } = get()
-    return workspaces[actualWorkspace]
-  },
-  goBackPath: async () => {
-    const { path } = get()
-    const old_path = await invoke<string>('back_dir', { dirPath: path })
+function setHome(home: string) {
+  setState({ home })
+}
 
-    get().goPath(old_path)
-    set({
-      nextPath: path,
-    })
-  },
+function setActualWorkspace(ws: number) {
+  setState({
+    actualWorkspace: ws,
+    path: state.workspaces[ws] || state.home,
+  })
+}
 
-  goNextPath: async () => {
-    const { goPath, nextPath } = get()
-    goPath(nextPath)
+// Adiciona um novo workspace e já navega pra ele
+function addWorkspace(initialPath?: string) {
+  const newPath = initialPath ?? state.home
+  setState('workspaces', (prev) => [...prev, newPath])
+  const newIndex = state.workspaces.length - 1
+  setState({ actualWorkspace: newIndex, path: newPath })
+  if (state.workspaces.length === 2) {
+    conf.toggleWorkspaceActive(true)
+  }
+  return newIndex
+}
+
+// Remove workspace pelo índice (não permite remover o último)
+function removeWorkspace(ws: number) {
+  if (state.workspaces.length <= 1) return
+
+  setState('workspaces', (prev) => prev.filter((_, i) => i !== ws))
+
+  // Ajusta o índice atual se necessário
+  const newLength = state.workspaces.length
+  const newActive = Math.min(state.actualWorkspace, newLength - 1)
+  setState({
+    actualWorkspace: newActive,
+    path: state.workspaces[newActive] || state.home,
+  })
+  if (state.workspaces.length === 1) {
+    conf.toggleWorkspaceActive(false)
+  }
+}
+
+/*
+function setWorkspacePath(ws: number) {
+  setState('workspaces', ws, state.home)
+}
+*/
+function goPath(path: string) {
+  setState('workspaces', state.actualWorkspace, path)
+  setState({ path })
+}
+
+function getCurrentWorkspacePath() {
+  return state.workspaces[state.actualWorkspace]
+}
+
+async function goBackPath() {
+  const oldPath = await invoke<string>('back_dir', { dirPath: state.path })
+  setState({ nextPath: state.path })
+  goPath(oldPath)
+}
+
+async function goNextPath() {
+  goPath(state.nextPath)
+}
+
+// exporta tudo junto
+export const useNavigationStore = () => ({
+  // estado reativo
+  get path() {
+    return state.path
   },
-}))
+  get nextPath() {
+    return state.nextPath
+  },
+  get home() {
+    return state.home
+  },
+  get actualWorkspace() {
+    return state.actualWorkspace
+  },
+  get workspaces() {
+    return state.workspaces
+  },
+  get workspaceCount() {
+    return state.workspaces.length
+  },
+  // ações
+  setPath,
+  setNextPath,
+  setHome,
+  setActualWorkspace,
+  //setWorkspacePath,
+  addWorkspace,
+  removeWorkspace,
+  goPath,
+  getCurrentWorkspacePath,
+  goBackPath,
+  goNextPath,
+})

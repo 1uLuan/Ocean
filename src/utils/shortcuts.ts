@@ -9,6 +9,8 @@ export type ShortcutAction =
   | 'workspace_2'
   | 'workspace_3'
   | 'workspace_4'
+  | 'add_workspace'
+  | 'remove_workspace'
   | 'next_workspace'
   | 'prev_workspace'
   | 'go_back'
@@ -82,7 +84,22 @@ export const SHORTCUTS: Record<ShortcutAction, Shortcut> = {
     action: 'workspace_4',
     type: 'keyboard',
   },
-
+  add_workspace: {
+    key: 'x',
+    shift: true,
+    alt: true,
+    description: 'add workspace',
+    action: 'add_workspace',
+    type: 'keyboard',
+  },
+  remove_workspace: {
+    key: 'z',
+    shift: true,
+    alt: true,
+    description: 'remove workspace',
+    action: 'remove_workspace',
+    type: 'keyboard',
+  },
   // ========== ATALHOS COM SCROLL ==========
   next_workspace: {
     scroll: 'down',
@@ -101,13 +118,13 @@ export const SHORTCUTS: Record<ShortcutAction, Shortcut> = {
 
   // ========== ATALHOS COM BOTÕES DO MOUSE ==========
   go_back: {
-    mouseButton: 3, // Botão "Voltar" lateral do mouse
+    mouseButton: 3,
     description: 'Voltar (Botão lateral esquerdo do mouse)',
     action: 'go_back',
     type: 'mouse',
   },
   go_forward: {
-    mouseButton: 4, // Botão "Avançar" lateral do mouse
+    mouseButton: 4,
     description: 'Avançar (Botão lateral direito do mouse)',
     action: 'go_forward',
     type: 'mouse',
