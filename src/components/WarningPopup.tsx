@@ -17,7 +17,7 @@ export function WarningPopup() {
   })
 
   let listEl: HTMLDivElement | undefined
-  useSmoothScroll(() => listEl, { speed: 1.2, smoothness: 0.2 })
+  useSmoothScroll(() => listEl, { speed: 1.2, smoothness: 0.3 })
 
   return (
     <>

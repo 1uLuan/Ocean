@@ -1,7 +1,6 @@
 import { For, Show, createMemo } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import { useContextMenuStore } from '../stores/ContextMenuStore.ts'
-import { useConfigStore } from '../stores/ConfigStore.ts'
 import { useFileStore } from '../stores/FileStore.ts'
 import { useNavigationStore } from '@/stores/NavigationStore.ts'
 import { usePopupControl } from '@/stores/PopupControl.ts'
@@ -35,10 +34,21 @@ export function ContextMenu() {
 
   function isDisabledPath(path: string): boolean {
     if (!path) return false
-    if (path.startsWith("/home/") || path.startsWith("/run/media/" + fil.lastPathSegment(nav.home) + "/")) return false
+    if (
+      path.startsWith("/home/") ||
+      path.startsWith("/run/media/" + fil.lastPathSegment(nav.home) + "/")
+    ) return false
     return disabledPrefixes.some((prefix) =>
       prefix === "/" ? path === "/" : path === prefix || path.startsWith(prefix + "/")
     )
+  }
+
+  function isFolder(): boolean {
+    if (fil.selectedFiles.length === 1) {
+      const selected = fil.files.find(f => f.path === fil.selectedFiles[0])
+      if (selected?.ftype !== 'folder') return false
+    }
+    return true
   }
 
   const btnList = createMemo(() => [
@@ -159,7 +169,7 @@ export function ContextMenu() {
       onClick: () => sidebar.addItem(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
-      visible: !fil.placeIsSelected,
+      visible: isFolder() && !fil.placeIsSelected,
     },
     {
       label: 'Remove From Places',
