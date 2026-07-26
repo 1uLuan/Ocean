@@ -75,7 +75,7 @@ export function SideBar() {
         <div class='w-4/5 h-px bg-(--border-primary) shrink-0' />
         <div class='text-[0.9rem]'>Dispositivos</div>
       </div>
-      <For each={disk.disks.slice().sort((a, b) => Number(a.is_removable) - Number(b.is_removable))}>
+      <For each={disk.disks.toSorted((a, b) => Number(a.is_removable) - Number(b.is_removable))}>
         {(d) => {
           return (
             <div class="flex w-full flex-col text-ellipsis whitespace-nowrap">
@@ -86,7 +86,8 @@ export function SideBar() {
                       fil.isSelected(p.mount_point) && fil.placeIsSelected
                         ? 'bg-(--bg-hover-secondary)'
                         : 'hover:bg-(--bg-hover-primary)'
-                    }`}
+                      }`}
+                    title={fil.formatSize(p.available_space).toString()}
                     onClick={async () => {
                       let mountPoint = p.mount_point
                       if (!p.is_mounted) {

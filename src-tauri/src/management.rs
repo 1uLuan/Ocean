@@ -1,3 +1,4 @@
+use crate::utils::generate_unique_path;
 use chrono::{DateTime, Local};
 use fs_extra::dir::{CopyOptions, TransitProcessResult};
 use serde::Serialize;
@@ -5,6 +6,7 @@ use std::fs::{self, create_dir_all, rename, File};
 use std::io::{self, BufReader, ErrorKind, Read};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering as AtomicOrdering, Ordering};
+use std::sync::Arc;
 use std::time::{Instant, SystemTime};
 use tauri::{AppHandle, Emitter};
 use trash::delete_all;
@@ -12,10 +14,7 @@ use walkdir::WalkDir;
 use zip::write::FileOptions;
 use zip::ZipWriter;
 
-use crate::utils::generate_unique_path;
-
 static CANCEL_FUNC: AtomicBool = AtomicBool::new(false);
-
 #[tauri::command]
 pub fn cancel_func() {
     CANCEL_FUNC.store(true, Ordering::SeqCst);
@@ -98,6 +97,39 @@ pub async fn delete(dir_path: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Clone, Serialize)]
+struct CopyProgressPayload {
+    copy_id: String,
+    current: usize,
+    total: usize,
+    file: String,
+    file_percent: f64,
+    total_percent: f64,
+    elapsed_secs: f64,
+    copied_bytes: u64,
+    total_bytes: u64,
+}
+
+fn get_total_size(paths: &[String]) -> u64 {
+    paths
+        .iter()
+        .map(|path_str| {
+            let path = Path::new(path_str);
+            if path.is_file() {
+                fs::metadata(path).map(|m| m.len()).unwrap_or(0)
+            } else {
+                WalkDir::new(path)
+                    .into_iter()
+                    .filter_map(Result::ok)
+                    .filter(|e| e.file_type().is_file())
+                    .filter_map(|e| e.metadata().ok())
+                    .map(|m| m.len())
+                    .sum()
+            }
+        })
+        .sum()
+}
+
 #[tauri::command]
 pub async fn copy_items_to(
     app: AppHandle,
@@ -110,8 +142,9 @@ pub async fn copy_items_to(
     }
 
     CANCEL_FUNC.store(false, Ordering::SeqCst);
-    let total = dir_paths.len();
-    let start = Instant::now();
+
+    let total_items = dir_paths.len();
+    let start_time = Instant::now();
     let target_dir = Path::new(&target_path);
 
     if !target_dir.exists() {
@@ -119,10 +152,13 @@ pub async fn copy_items_to(
             .map_err(|e| format!("Erro ao criar destino {}: {}", target_path, e))?;
     }
 
-    for (i, dir_path) in dir_paths.into_iter().enumerate() {
+    let grand_total_bytes = get_total_size(&dir_paths);
+    let total_processed_bytes = Arc::new(AtomicU64::new(0));
+
+    for (index, dir_path) in dir_paths.into_iter().enumerate() {
         if CANCEL_FUNC.load(Ordering::Relaxed) {
             CANCEL_FUNC.store(false, Ordering::SeqCst);
-            return Err("Operação cancelada pelo usuario".to_string());
+            return Err("Operação cancelada pelo usuário".to_string());
         }
 
         let source_path = PathBuf::from(&dir_path);
@@ -133,94 +169,86 @@ pub async fn copy_items_to(
         let file_name = source_path
             .file_name()
             .and_then(|name| name.to_str())
-            .ok_or_else(|| format!("Nome de arquivo inválido: {}", dir_path))?;
+            .ok_or_else(|| format!("Nome de arquivo inválido: {}", dir_path))?
+            .to_string();
 
-        let unique_target = generate_unique_path(target_dir, file_name);
-        let current_index = i + 1;
+        let unique_target = generate_unique_path(target_dir, &file_name);
 
-        // --- CORREÇÃO AQUI: Clones locais para serem movidos para a thread ---
-        let source_path_clone = source_path.clone(); // <--- Clonando o PathBuf de origem
-        let unique_target_clone = unique_target.clone(); // <--- Clonando o destino para a thread
-        let app_clone = app.clone();
-        let file_name_owned = file_name.to_string();
-        let id = copy_id.clone();
+        // Contexto compartilhado para o evento de progresso dentro da thread
+        let current_item_index = index + 1;
+        let app_handle = app.clone();
+        let copy_id_clone = copy_id.clone();
+        let file_name_clone = file_name.clone();
+        let processed_bytes_arc = Arc::clone(&total_processed_bytes);
 
         tokio::task::spawn_blocking(move || {
-            // Agora usamos as variáveis clonadas que pertencem exclusivamente a esta thread
-            if source_path_clone.is_dir() {
-                let mut options_dir = CopyOptions::new();
-                options_dir.copy_inside = true;
-                options_dir.overwrite = false;
+            let mut last_copied_item_bytes = 0u64;
 
-                let callback_dir = |tp: fs_extra::dir::TransitProcess| {
-                    if CANCEL_FUNC.load(Ordering::Relaxed) {
-                        return TransitProcessResult::Abort;
-                    }
-                    let file_progress = if tp.total_bytes > 0 {
-                        (tp.copied_bytes as f64 / tp.total_bytes as f64) * 100.0
-                    } else {
-                        0.0
-                    };
-
-                    let _ = app_clone.emit(
-                        "copy_progress",
-                        serde_json::json!({
-                            "copy_id": id,
-                            "current": current_index,
-                            "file": file_name_owned,
-                            "file_percent": file_progress,
-                            "total": total,
-                            "elapsed_secs": start.elapsed().as_secs_f64(),
-                            "copied_bytes": tp.copied_bytes,
-                            "total_bytes": tp.total_bytes,
-                        }),
-                    );
-                    TransitProcessResult::ContinueOrAbort
+            // Função utilitária interna para emitir os dados do progresso
+            let mut emit_progress = move |copied_bytes: u64, total_bytes: u64| {
+                let file_percent = if total_bytes > 0 {
+                    (copied_bytes as f64 / total_bytes as f64) * 100.0
+                } else {
+                    0.0
                 };
 
-                fs_extra::dir::copy_with_progress(
-                    source_path_clone,
-                    unique_target_clone,
-                    &options_dir,
-                    callback_dir,
-                )
-                .map(|_| ())
-            } else {
-                let mut options_file = fs_extra::file::CopyOptions::new();
-                options_file.overwrite = false;
+                let delta = copied_bytes.saturating_sub(last_copied_item_bytes);
+                last_copied_item_bytes = copied_bytes;
 
-                let callback_file = |tp: fs_extra::file::TransitProcess| {
+                let current_grand_processed =
+                    processed_bytes_arc.fetch_add(delta, Ordering::Relaxed) + delta;
+
+                let total_percent = if grand_total_bytes > 0 {
+                    (current_grand_processed as f64 / grand_total_bytes as f64) * 100.0
+                } else {
+                    0.0
+                };
+
+                let payload = CopyProgressPayload {
+                    copy_id: copy_id_clone.clone(),
+                    current: current_item_index,
+                    total: total_items,
+                    file: file_name_clone.clone(),
+                    file_percent,
+                    total_percent,
+                    elapsed_secs: start_time.elapsed().as_secs_f64(),
+                    copied_bytes: current_grand_processed,
+                    total_bytes: grand_total_bytes,
+                };
+
+                let _ = app_handle.emit("copy_progress", payload);
+            };
+
+            if source_path.is_dir() {
+                let mut options = fs_extra::dir::CopyOptions::new();
+                options.copy_inside = true;
+                options.overwrite = false;
+
+                let callback = move |tp: fs_extra::dir::TransitProcess| {
+                    if CANCEL_FUNC.load(Ordering::Relaxed) {
+                        return fs_extra::dir::TransitProcessResult::Abort;
+                    }
+                    emit_progress(tp.copied_bytes, tp.total_bytes);
+                    fs_extra::dir::TransitProcessResult::ContinueOrAbort
+                };
+
+                fs_extra::dir::copy_with_progress(source_path, unique_target, &options, callback)
+                    .map(|_| ())
+                    .map_err(|e| e.to_string())
+            } else {
+                let mut options = fs_extra::file::CopyOptions::new();
+                options.overwrite = false;
+
+                let callback = move |tp: fs_extra::file::TransitProcess| {
                     if CANCEL_FUNC.load(Ordering::Relaxed) {
                         return;
                     }
-                    let file_progress = if tp.total_bytes > 0 {
-                        (tp.copied_bytes as f64 / tp.total_bytes as f64) * 100.0
-                    } else {
-                        0.0
-                    };
-
-                    let _ = app_clone.emit(
-                        "copy_progress",
-                        serde_json::json!({
-                            "copy_id": id,
-                            "current": current_index,
-                            "file": file_name_owned,
-                            "file_percent": file_progress,
-                            "total": total,
-                            "elapsed_secs": start.elapsed().as_secs_f64(),
-                            "copied_bytes": tp.copied_bytes,
-                            "total_bytes": tp.total_bytes,
-                        }),
-                    );
+                    emit_progress(tp.copied_bytes, tp.total_bytes);
                 };
 
-                fs_extra::file::copy_with_progress(
-                    source_path_clone,
-                    unique_target_clone,
-                    &options_file,
-                    callback_file,
-                )
-                .map(|_| ())
+                fs_extra::file::copy_with_progress(source_path, unique_target, &options, callback)
+                    .map(|_| ())
+                    .map_err(|e| e.to_string())
             }
         })
         .await
@@ -320,6 +348,7 @@ impl<'a, R: Read> Read for ProgressReader<'a, R> {
                     "file": self.file_name,
                     "processed_bytes": total_processed,
                     "total_bytes": self.grand_total,
+                    "file_total_bytes": self.total_bytes,
                     "percent": percent,
                     "elapsed_secs": self.start.elapsed().as_secs_f64(),
                 }),

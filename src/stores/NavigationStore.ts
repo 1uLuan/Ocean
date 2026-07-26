@@ -52,24 +52,35 @@ function addWorkspace(initialPath?: string) {
   return newIndex
 }
 
-// Remove workspace pelo índice (não permite remover o último)
 function removeWorkspace(ws: number) {
   if (state.workspaces.length <= 1) return
 
+  const previousActive = state.actualWorkspace // captura ANTES de mexer no array
+
   setState('workspaces', (prev) => prev.filter((_, i) => i !== ws))
 
-  // Ajusta o índice atual se necessário
   const newLength = state.workspaces.length
-  const newActive = Math.min(state.actualWorkspace, newLength - 1)
+
+  let newActive: number
+  if (ws < previousActive) {
+    newActive = previousActive - 1
+  } else if (ws === previousActive) {
+    newActive = Math.min(ws, newLength - 1)
+  } else {
+    newActive = previousActive
+  }
+
+  newActive = Math.min(Math.max(newActive, 0), newLength - 1)
+
   setState({
     actualWorkspace: newActive,
     path: state.workspaces[newActive] || state.home,
   })
+
   if (state.workspaces.length === 1) {
     conf.toggleWorkspaceActive(false)
   }
 }
-
 /*
 function setWorkspacePath(ws: number) {
   setState('workspaces', ws, state.home)
