@@ -22,7 +22,7 @@ export function CompressPopup(props: Props) {
   const [file, setFile] = createSignal('')
   const [percent, setPercent] = createSignal(0)
   const [totalBytes, setTotalBytes] = createSignal(0)
-  const [fileTotalBytes, setFileTotalBytes] = createSignal(0)
+  //const [fileTotalBytes, setFileTotalBytes] = createSignal(0)
   const [processedBytes, setProcessedBytes] = createSignal(0)
   const [elapsedSecs, setElapsedSecs] = createSignal(0)
 
@@ -35,7 +35,7 @@ export function CompressPopup(props: Props) {
       setFile(data.file)
       setPercent(data.percent)
       setTotalBytes(data.total_bytes)
-      setFileTotalBytes(data.file_total_bytes)
+      //setFileTotalBytes(data.file_total_bytes)
       setProcessedBytes(data.processed_bytes)
       setElapsedSecs(data.elapsed_secs)
     }).then((fn) => (unlisten = fn))

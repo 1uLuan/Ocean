@@ -97,7 +97,8 @@ export function MainContent() {
 
   createEffect(() => {
     // Dependências explícitas controladas
-    const _reload = fil.reload
+    const reload = fil.reload
+    console.log(reload)
     const workspace = nav.workspaces[nav.actualWorkspace]
     if (!workspace) return
 
