@@ -11,13 +11,11 @@ import {
 import { useNavigationStore } from '@/stores/NavigationStore'
 import { useFileStore } from '@/stores/FileStore'
 import { useContextMenuStore } from '@/stores/ContextMenuStore'
-import { useConfigStore } from '@/stores/ConfigStore'
 
 export function useKeyboardShortcuts() {
   const fil = useFileStore()
   const cont = useContextMenuStore()
   const nav = useNavigationStore()
-  const conf = useConfigStore()
 
   onMount(() => {
     // ========== EXECUTAR AÇÃO DO ATALHO ==========
