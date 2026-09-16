@@ -1,6 +1,6 @@
 import { onMount, onCleanup, createSignal, createResource, Show } from 'solid-js'
 import { listen, UnlistenFn } from '@tauri-apps/api/event'
-import  X  from '~icons/ph/x'
+import X from '~icons/ph/x'
 import { invoke } from '@tauri-apps/api/core'
 
 type CompressProgressPayload = {
@@ -61,7 +61,7 @@ export function CompressPopup(props: Props) {
           class="transition-color flex h-7 w-7 items-center justify-center rounded-sm border border-(--border-secondary) duration-150 hover:bg-(--accent-danger)"
           onClick={() => props.onCancel(props.opId)}
         >
-          <X class='size-3' />
+          <X class="size-3" />
         </button>
       </div>
       {/*middle*/}

@@ -36,6 +36,8 @@ export function CopyPopup(props: Props) {
   const [total, setTotal] = createSignal(0)
   const [current, setCurrent] = createSignal(0)
 
+  const [panelIsOpen, setPanel] = createSignal(false)
+
   onMount(() => {
     let unlisten: UnlistenFn | undefined
 
@@ -62,46 +64,48 @@ export function CopyPopup(props: Props) {
   })
 
   return (
-    <div class="flex h-40 w-full shrink-0 flex-col rounded-md border border-(--border-secondary) bg-(--bg-card) p-1">
-      {/* Top */}
-      <div class="flex flex-row items-start justify-between">
-        <div class="w-8/12 truncate rounded-sm border border-(--border-secondary) bg-(--bg-secondary) pl-1 text-[0.75rem]">
-          {file() || 'Aguardando...'}
-        </div>
-        <button
-          class="flex h-7 w-7 items-center justify-center rounded-sm border border-(--border-secondary) transition-colors duration-150 hover:bg-(--accent-danger)"
-          onClick={() => props.onCancel(props.copyId)}
+    <div
+      class="relative flex h-8 w-full flex-col justify-center rounded-md border border-(--border-primary) bg-(--bg-tertiary) p-1"
+      onClick={() => setPanel(!panelIsOpen())}
+    >
+      <span class="truncate text-center text-[0.85rem]">{'Copiando ' + file()}</span>
+      <Show when={panelIsOpen()}>
+        <div
+          data-="Overlay"
+          class="fixed inset-0 z-40 h-screen w-screen bg-transparent"
+          onMouseDown={() => {
+            setPanel(false)
+          }}
+        />
+        <div
+          class="absolute bottom-px left-38 z-50 flex h-20 w-72 flex-col rounded-md border border-(--border-primary) bg-(--bg-modal) p-1 shadow-(--shadow-md)"
+          onClick={(e) => e.stopPropagation()}
         >
-          <X class="size-3" />
-        </button>
-      </div>
-
-      {/* Middle */}
-      <div class="flex flex-row gap-2">
-        <Show when={total() > 1}>
-          <div class="pl-0.5 text-[0.70rem]">Current: {current()}</div>
-          <div class="pl-0.5 text-[0.70rem]">Total: {total()}</div>
-        </Show>
-      </div>
-
-      {/* Bottom */}
-      <div class="flex h-full w-full flex-col justify-end">
-        <div class="flex flex-row pl-1">
-          <div class="text-[0.75rem]">{Math.floor(progress())}%</div>
-          <div class="flex w-full flex-row justify-end">
-            <div class="mr-1 text-[0.75rem]">
-              {formatBytes(copiedBytes())} de {formatBytes(totalBytes())}
+          <div class="flex w-full flex-row">
+            <span class="w-full flex-1 truncate">{file()}</span>
+            <div
+              class="flex h-5 items-center justify-center rounded-sm hover:bg-(--bg-hover-secondary)"
+              onclick={() => props.onCancel(props.copyId)}
+            >
+              <X></X>
             </div>
           </div>
+          <div class="flex h-full w-full flex-col justify-end">
+            <div class="flex flex-row">
+              <span class="flex-1 text-[0.8rem]">
+                {formatBytes(copiedBytes())} {formatBytes(totalBytes())}
+              </span>
+              <Show when={total() > 1}>
+                <span class="text-[0.78rem]">{current() + '/' + total()}</span>
+              </Show>
+            </div>
+            <div
+              class="h-1.5 w-full rounded-lg bg-(--accent-primary)"
+              style={{ width: `${Math.floor(progress())}%` }}
+            ></div>
+          </div>
         </div>
-        <div class="flex h-1.5 w-full flex-row gap-0.5 overflow-hidden transparent">
-          <div
-            class="h-full rounded-full bg-(--accent-glow) transition-[width] duration-200 ease-in-out"
-            style={{ width: `${Math.min(100, Math.max(0, progress()))}%` }}
-          />
-          <div class="h-full flex-1 rounded-full bg-(--bg-primary)" />
-        </div>
-      </div>
+      </Show>
     </div>
   )
 }

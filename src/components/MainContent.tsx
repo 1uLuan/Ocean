@@ -4,7 +4,7 @@ import { icons } from '@/assets'
 import { useFileStore, Fileinfo } from '@/stores/FileStore.ts'
 import { useNavigationStore } from '@/stores/NavigationStore.ts'
 import { useContextMenuStore } from '@/stores/ContextMenuStore.ts'
-import { useSmoothScroll } from '@/hooks/useSmoothScroll.ts'
+import { useSmoothScroll, SmoothScrollControls } from '@/hooks/useSmoothScroll.ts'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { useConfigStore } from '@/stores/ConfigStore'
 
@@ -89,6 +89,15 @@ export function ThumbnailImage(props: ThumbnailImageProps) {
   )
 }
 
+// Distância (em px) da borda do container a partir da qual o auto-scroll começa
+const AUTO_SCROLL_EDGE = 48
+// Velocidade máxima (px por frame) somada ao alvo de scroll quando o cursor
+// está colado na borda
+const AUTO_SCROLL_MAX_SPEED = 16
+// Movimento mínimo (px, em espaço de conteúdo) antes de considerar que virou
+// um arrasto de seleção (evita "flash" do retângulo em cliques simples)
+const DRAG_THRESHOLD = 4
+
 export function MainContent() {
   const nav = useNavigationStore()
   const fil = useFileStore()
@@ -129,6 +138,178 @@ export function MainContent() {
 
   const [altPressed, setAltPressed] = createSignal(false)
 
+  // Estado do retângulo de seleção em ESPAÇO DE CONTEÚDO: x/y são a distância
+  // desde o topo/esquerda do conteúdo rolável do <ul> (não da tela). Isso é o
+  // que permite o retângulo "rolar junto" com a lista de forma consistente e
+  // não perder itens que saem da área visível.
+  const [dragBox, setDragBox] = createSignal<{ x: number; y: number; w: number; h: number } | null>(
+    null
+  )
+
+  let scrollControls: SmoothScrollControls | undefined
+  let dragOrigin = { x: 0, y: 0 } // em espaço de conteúdo
+  let dragBaseSelection: string[] = []
+  let isDraggingSelection = false
+  let autoScrollRAF: number | null = null
+  let lastPointerX = 0
+  let lastPointerY = 0
+  let activeDragCleanup: (() => void) | null = null
+  // Altura/largura REAL do conteúdo, medidas no início do arrasto (antes do
+  // retângulo existir no DOM). Usadas para travar o retângulo e impedir que
+  // ele "vaze" além do fim da lista — um <li absolute> que ultrapassa o
+  // conteúdo aumenta o scrollHeight do <ul>, o que libera mais scroll, o que
+  // estica o retângulo ainda mais: um loop infinito de auto-scroll.
+  let dragContentHeight = 0
+  let dragContentWidth = 0
+
+  // Converte uma coordenada de tela (clientX/clientY) para espaço de conteúdo
+  // do container rolável: distância desde o topo/esquerda do conteúdo total,
+  // somando o scroll atual. Fica imune a mudanças de scrollTop/scrollLeft.
+  const getContentPoint = (el: HTMLElement, clientX: number, clientY: number) => {
+    const rect = el.getBoundingClientRect()
+    return {
+      x: clientX - rect.left + el.scrollLeft,
+      y: clientY - rect.top + el.scrollTop,
+    }
+  }
+
+  const updateDragBox = (clientX: number, clientY: number) => {
+    const el = listEl()
+    if (!el) return
+
+    const raw = getContentPoint(el, clientX, clientY)
+    // Trava nos limites reais do conteúdo (capturados no início do arrasto),
+    // nunca no scrollHeight/scrollWidth atual do <ul> — que já pode estar
+    // contaminado pelo próprio retângulo de um frame anterior.
+    const current = {
+      x: Math.max(0, Math.min(raw.x, dragContentWidth)),
+      y: Math.max(0, Math.min(raw.y, dragContentHeight)),
+    }
+
+    const left = Math.min(dragOrigin.x, current.x)
+    const top = Math.min(dragOrigin.y, current.y)
+    const width = Math.abs(current.x - dragOrigin.x)
+    const height = Math.abs(current.y - dragOrigin.y)
+
+    if (width < DRAG_THRESHOLD && height < DRAG_THRESHOLD) {
+      setDragBox(null)
+      return
+    }
+
+    setDragBox({ x: left, y: top, w: width, h: height })
+  }
+
+  const updateIntersections = () => {
+    const el = listEl()
+    const box = dragBox()
+    if (!el || !box) return
+
+    const boxRect = { left: box.x, top: box.y, right: box.x + box.w, bottom: box.y + box.h }
+    const rows = el.querySelectorAll<HTMLElement>('[data-file-row]')
+    const intersecting: string[] = []
+
+    rows.forEach((row) => {
+      // offsetTop/offsetLeft são relativos ao <ul> (nearest positioned
+      // ancestor) e não mudam com o scroll — mesmo espaço de coordenadas
+      // usado pelo dragBox, então a interseção continua correta mesmo
+      // para linhas que saíram da área visível.
+      const rowTop = row.offsetTop
+      const rowLeft = row.offsetLeft
+      const rowBottom = rowTop + row.offsetHeight
+      const rowRight = rowLeft + row.offsetWidth
+
+      const hit = !(
+        rowRight < boxRect.left ||
+        rowLeft > boxRect.right ||
+        rowBottom < boxRect.top ||
+        rowTop > boxRect.bottom
+      )
+      if (hit) {
+        const path = row.dataset.path
+        if (path) intersecting.push(path)
+      }
+    })
+
+    fil.setSelected(Array.from(new Set([...dragBaseSelection, ...intersecting])))
+  }
+
+  const runAutoScroll = () => {
+    const el = listEl()
+    if (!isDraggingSelection || !el) {
+      autoScrollRAF = null
+      return
+    }
+
+    const rect = el.getBoundingClientRect()
+    const distFromTop = lastPointerY - rect.top
+    const distFromBottom = rect.bottom - lastPointerY
+
+    let delta = 0
+    if (distFromTop < AUTO_SCROLL_EDGE) {
+      const intensity = 1 - Math.max(distFromTop, 0) / AUTO_SCROLL_EDGE
+      delta = -AUTO_SCROLL_MAX_SPEED * intensity
+    } else if (distFromBottom < AUTO_SCROLL_EDGE) {
+      const intensity = 1 - Math.max(distFromBottom, 0) / AUTO_SCROLL_EDGE
+      delta = AUTO_SCROLL_MAX_SPEED * intensity
+    }
+
+    if (delta !== 0) {
+      scrollControls?.scrollBy(delta)
+      // O scroll muda scrollTop; como origin/current são em espaço de
+      // conteúdo, isso estica o retângulo naturalmente (ele "cresce" para
+      // acompanhar o que passou a ficar entre o ponto inicial e o cursor)
+      updateDragBox(lastPointerX, lastPointerY)
+      updateIntersections()
+    }
+
+    autoScrollRAF = requestAnimationFrame(runAutoScroll)
+  }
+
+  const startDragSelect = (e: MouseEvent) => {
+    const el = listEl()
+    if (!el) return
+
+    e.preventDefault()
+    isDraggingSelection = true
+    // Medido AQUI, antes de qualquer setDragBox — nesse momento o retângulo
+    // ainda não existe no DOM, então scrollHeight/scrollWidth refletem só o
+    // conteúdo real (linhas de arquivo), sem contaminação.
+    dragContentHeight = el.scrollHeight
+    dragContentWidth = el.scrollWidth
+    dragOrigin = getContentPoint(el, e.clientX, e.clientY)
+    lastPointerX = e.clientX
+    lastPointerY = e.clientY
+    document.body.style.userSelect = 'none'
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isDraggingSelection) return
+      lastPointerX = ev.clientX
+      lastPointerY = ev.clientY
+      updateDragBox(ev.clientX, ev.clientY)
+      updateIntersections()
+      if (autoScrollRAF === null) {
+        autoScrollRAF = requestAnimationFrame(runAutoScroll)
+      }
+    }
+
+    const handleMouseUp = () => {
+      isDraggingSelection = false
+      setDragBox(null)
+      document.body.style.userSelect = ''
+      if (autoScrollRAF !== null) {
+        cancelAnimationFrame(autoScrollRAF)
+        autoScrollRAF = null
+      }
+      activeDragCleanup = null
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    activeDragCleanup = handleMouseUp
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+  }
+
   onMount(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'Alt') setAltPressed(true)
@@ -141,6 +322,8 @@ export function MainContent() {
     onCleanup(() => {
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
+      // Se o componente desmontar no meio de um arrasto, encerra a sessão
+      activeDragCleanup?.()
     })
   })
 
@@ -151,7 +334,7 @@ export function MainContent() {
     const el = listEl()
     if (!el || !headerRef) return
 
-    useSmoothScroll(() => el, {
+    scrollControls = useSmoothScroll(() => el, {
       speed: 1,
       smoothness: 0.1,
       lock: altPressed,
@@ -170,7 +353,7 @@ export function MainContent() {
       <div class="flex h-full min-h-0 w-full min-w-0 flex-col bg-(--bg-primary)">
         <div
           ref={headerRef}
-          class="grid h-8 min-w-150 grid-cols-[minmax(200px,1fr)_100px_90px_90px] items-center text-[0.7rem] text-(--text-muted) overflow-hidden"
+          class="grid h-8 min-w-150 grid-cols-[minmax(200px,1fr)_100px_90px_90px] items-center overflow-hidden text-[0.7rem] text-(--text-muted)"
         >
           <div class="pl-1.5">Nome</div>
           <div>Tipo</div>
@@ -180,17 +363,21 @@ export function MainContent() {
         <div class="h-px w-full shrink-0 bg-(--border-secondary)" />
         <ul
           ref={setlistEl}
-          class="flex h-full w-full min-w-0 list-none flex-col overflow-scroll"
+          class="relative flex h-full w-full min-w-0 list-none flex-col overflow-scroll"
         >
           <For each={fil.files}>
             {(file, index) => (
               <li class="w-full min-w-0">
                 <div
-                  class={`grid h-9.5 w-full min-w-150 grid-cols-[38px_minmax(200px,1fr)_96px_84px_90px] items-center gap-0.5 pl-1 text-left text-[0.8rem] ${
-                    fil.isSelected(file.path) && !fil.placeIsSelected
-                      ? 'bg-(--bg-hover-secondary)'
-                      : 'hover:bg-(--bg-hover-primary)'
-                  }`}
+                  class="grid h-9.5 w-full min-w-150 grid-cols-[38px_minmax(200px,1fr)_96px_84px_90px] items-center gap-0.5 pl-1 text-left text-[0.8rem]"
+                  data-file-row
+                  data-path={file.path}
+                  classList={{
+                    'bg-(--bg-hover-secondary)': fil.isSelected(file.path) && !fil.placeIsSelected,
+                    'hover:bg-(--bg-hover-primary)': !(
+                      fil.isSelected(file.path) && !fil.placeIsSelected
+                    ),
+                  }}
                   onDblClick={() => {
                     if (file.ftype === 'folder') {
                       nav.goPath(file.path)
@@ -215,19 +402,29 @@ export function MainContent() {
                   }}
                 >
                   {/*Area Esquerda*/}
-                  <div class="col-span-2 flex h-full min-w-0 items-center"
+                  <div
+                    class="col-span-2 flex h-full min-w-0 items-center"
                     onContextMenu={(e) => {
                       if (!fil.isSelected(file.path)) {
                         fil.setSelected([file.path])
                       }
                       cont.handleContextMenu(e)
-                      }
-                    }
+                    }}
                   >
                     <Show
                       when={[
-                        'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg',
-                        'tiff', 'tif', 'heic', 'heif', 'avif', 'ico',
+                        'png',
+                        'jpg',
+                        'jpeg',
+                        'gif',
+                        'webp',
+                        'svg',
+                        'tiff',
+                        'tif',
+                        'heic',
+                        'heif',
+                        'avif',
+                        'ico',
                       ].includes(file.ftype.toLowerCase())}
                       fallback={
                         <img
@@ -235,32 +432,60 @@ export function MainContent() {
                           alt={file.ftype}
                           height={38}
                           width={38}
+                          classList={{ 'opacity-50': file.name.startsWith('.') }}
                         />
                       }
                     >
                       <ThumbnailImage filePath={file.path} alt={file.ftype} />
                     </Show>
-                    <div class="ml-2 truncate">{file.name}</div>
+                    <div
+                      class="ml-2 truncate"
+                      classList={{ 'opacity-50': file.name.startsWith('.') }}
+                    >
+                      {file.name}
+                    </div>
                   </div>
 
                   {/*Area Direita*/}
                   <div
-                    class="grid h-full w-full grid-cols-[96px_84px_90px] items-center"
+                    class="col-span-3 grid h-full w-full grid-cols-[96px_84px_90px] items-center"
                     onContextMenu={(e) => {
-                        if (fil.isSelected(file.path)) {
-                          cont.handleContextMenu(e)
-                        } else {
-                          fil.resetInterval()
-                          fil.resetSelected()
-                          cont.handleContextMenu(e)
-                        }
-                      }}
+                      if (fil.isSelected(file.path)) {
+                        cont.handleContextMenu(e)
+                      } else {
+                        fil.resetInterval()
+                        fil.resetSelected()
+                        cont.handleContextMenu(e)
+                      }
+                    }}
+                    onMouseDown={(e) => {
+                      if (e.button !== 0) return
+                      dragBaseSelection = e.ctrlKey ? [...fil.selectedFiles] : []
+                      if (!e.ctrlKey) {
+                        fil.resetInterval()
+                        fil.resetSelected()
+                      }
+                      startDragSelect(e)
+                    }}
                   >
-                    <div class="truncate text-(--text-secondary) w-full h-full items-center flex">{file.ftype}</div>
-                    <div class="text-[0.8rem] truncate text-(--text-secondary) w-full h-full items-center flex">
+                    <div
+                      class="flex h-full w-full items-center truncate text-(--text-secondary)"
+                      classList={{ 'opacity-50': file.name.startsWith('.') }}
+                    >
+                      {file.ftype}
+                    </div>
+                    <div
+                      class="flex h-full w-full items-center truncate text-[0.8rem] text-(--text-secondary)"
+                      classList={{ 'opacity-50': file.name.startsWith('.') }}
+                    >
                       {file.ftype !== 'folder' && file.size}
                     </div>
-                    <div class="text-[0.8rem] text-(--text-secondary) w-full h-full items-center flex">{file.last_modified}</div>
+                    <div
+                      class="flex h-full w-full items-center text-[0.8rem] text-(--text-secondary)"
+                      classList={{ 'opacity-50': file.name.startsWith('.') }}
+                    >
+                      {file.last_modified}
+                    </div>
                   </div>
                 </div>
               </li>
@@ -272,15 +497,26 @@ export function MainContent() {
             fallback={
               <li
                 class="h-full w-full min-w-150"
-                onContextMenu={cont.handleContextMenu}
+                onContextMenu={(e) => {
+                  fil.resetInterval()
+                  fil.resetSelected()
+                  cont.handleContextMenu(e)
+                }}
                 onMouseDown={(e) => {
-                  if (e.button === 0 && e.ctrlKey && e.altKey) {
+                  if (e.button !== 0) return
+
+                  if (e.ctrlKey && e.altKey) {
                     fil.setIntervalSelected([fil.files.length])
                     fil.intervalSelection(fil.files)
-                  } else if (e.button === 0) {
+                    return
+                  }
+
+                  dragBaseSelection = e.ctrlKey ? [...fil.selectedFiles] : []
+                  if (!e.ctrlKey) {
                     fil.resetInterval()
                     fil.resetSelected()
                   }
+                  startDragSelect(e)
                 }}
               />
             }
@@ -291,6 +527,27 @@ export function MainContent() {
             >
               Nenhum Arquivo no Diretório
             </div>
+          </Show>
+
+          {/* Retângulo de seleção: filho do <ul>, position absolute em espaço
+              de conteúdo. O overflow-scroll do <ul> já clipa automaticamente
+              qualquer parte que ultrapasse a área visível da lista, e por ser
+              parte do conteúdo, ele rola junto com o resto ao invés de ficar
+              fixo na tela. */}
+          <Show when={dragBox()}>
+            {(box) => (
+              <li
+                class="pointer-events-none absolute z-50 border"
+                style={{
+                  left: `${box().x}px`,
+                  top: `${box().y}px`,
+                  width: `${box().w}px`,
+                  height: `${box().h}px`,
+                  'background-color': 'rgba(59, 130, 246, 0.15)',
+                  'border-color': 'rgba(59, 130, 246, 0.6)',
+                }}
+              />
+            )}
           </Show>
         </ul>
       </div>

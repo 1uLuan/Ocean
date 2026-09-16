@@ -1,7 +1,7 @@
 [package]
 name = "ocean-app"
 version = "0.1.0"
-description = "A Tauri App"
+description = "A File Manager For Linux "
 authors = ["1uLuan"]
 edition = "2021"
 

@@ -1,6 +1,6 @@
 use crate::utils::generate_unique_path;
 use chrono::{DateTime, Local};
-use fs_extra::dir::{CopyOptions, TransitProcessResult};
+use fs_extra::dir::CopyOptions;
 use serde::Serialize;
 use std::fs::{self, create_dir_all, rename, File};
 use std::io::{self, BufReader, ErrorKind, Read};

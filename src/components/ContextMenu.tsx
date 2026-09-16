@@ -5,6 +5,7 @@ import { useFileStore } from '../stores/FileStore.ts'
 import { useNavigationStore } from '@/stores/NavigationStore.ts'
 import { usePopupControl } from '@/stores/PopupControl.ts'
 import { useSidebarItemsStore } from '@/stores/SidebarItemsStore.ts'
+
 //icons
 import Copy from '~icons/ph/copy'
 import CaretRight from '~icons/ph/caret-right'
@@ -17,7 +18,8 @@ import Scissors from '~icons/ph/scissors'
 import File from '~icons/ph/file'
 import ArchiveBox from '~icons/ph/archive-box'
 import Archive from '~icons/ph/archive'
-
+import StackPlus from '~icons/ph/stack-plus'
+import StackMinus from '~icons/ph/stack-minus'
 
 export function ContextMenu() {
   const fil = useFileStore()
@@ -27,25 +29,43 @@ export function ContextMenu() {
   const sidebar = useSidebarItemsStore()
 
   const disabledPrefixes = [
-    "/", "/bin", "/boot", "/dev", "/etc", "/home", "/lib", "/lib64",
-    "/lost+found", "/mnt", "/opt", "/proc", "/root", "/run",
-    "/sbin", "/srv", "/sys", "/tmp", "/usr", "/var",
+    '/',
+    '/bin',
+    '/boot',
+    '/dev',
+    '/etc',
+    '/home',
+    '/lib',
+    '/lib64',
+    '/lost+found',
+    '/mnt',
+    '/opt',
+    '/proc',
+    '/root',
+    '/run',
+    '/sbin',
+    '/srv',
+    '/sys',
+    '/tmp',
+    '/usr',
+    '/var',
   ]
 
   function isDisabledPath(path: string): boolean {
     if (!path) return false
     if (
-      path.startsWith("/home/") ||
-      path.startsWith("/run/media/" + fil.lastPathSegment(nav.home) + "/")
-    ) return false
+      path.startsWith('/home/') ||
+      path.startsWith('/run/media/' + fil.lastPathSegment(nav.home) + '/')
+    )
+      return false
     return disabledPrefixes.some((prefix) =>
-      prefix === "/" ? path === "/" : path === prefix || path.startsWith(prefix + "/")
+      prefix === '/' ? path === '/' : path === prefix || path.startsWith(prefix + '/')
     )
   }
 
   function isFolder(): boolean {
     if (fil.selectedFiles.length === 1) {
-      const selected = fil.files.find(f => f.path === fil.selectedFiles[0])
+      const selected = fil.files.find((f) => f.path === fil.selectedFiles[0])
       if (selected?.ftype !== 'folder') return false
     }
     return true
@@ -58,11 +78,11 @@ export function ContextMenu() {
       onClick: undefined,
       onMouseEnter: () => cont.setShowDirMenu(true),
       disabled: isDisabledPath(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
-      visible: !fil.placeIsSelected && (
-        fil.selectedFiles.length === 0 ||
-        (fil.selectedFiles.length === 1 &&
-          fil.files.find(f => f.path === fil.selectedFiles[0])?.ftype === "folder")
-      ),
+      visible:
+        !fil.placeIsSelected &&
+        (fil.selectedFiles.length === 0 ||
+          (fil.selectedFiles.length === 1 &&
+            fil.files.find((f) => f.path === fil.selectedFiles[0])?.ftype === 'folder')),
     },
     {
       label: 'Rename',
@@ -109,10 +129,7 @@ export function ContextMenu() {
       visible: !fil.placeIsSelected && (fil.copySelected.length || fil.cutSelected.length),
     },
     {
-      label:
-        nav.workspaces[nav.actualWorkspace] === nav.home + '/.local/share/Trash/files'
-          ? 'Delete'
-          : 'Move To Trash',
+      label: 'Move To Trash',
       icon: <Trash />,
       onClick: () => {
         if (fil.selectedFiles.length > 0) {
@@ -126,14 +143,19 @@ export function ContextMenu() {
       },
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: isDisabledPath(nav.path),
-      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
+      visible:
+        nav.workspaces[nav.actualWorkspace] != nav.home + '/.local/share/Trash/files' &&
+        !fil.placeIsSelected &&
+        fil.selectedFiles.length > 0,
     },
     {
       label: 'Open Terminal',
       icon: <TerminalWindow />,
       onClick: async () => {
         try {
-          await invoke('open_terminal', { path: fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path })
+          await invoke('open_terminal', {
+            path: fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path,
+          })
         } catch (error) {
           console.log(error)
         }
@@ -165,19 +187,28 @@ export function ContextMenu() {
     },
     {
       label: 'Add To Places',
-      icon: <Archive />,
-      onClick: () => sidebar.addItem(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
+      icon: <StackPlus />,
+      onClick: () =>
+        sidebar.addItem(fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path),
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
-      visible: isFolder() && !fil.placeIsSelected,
+      visible: fil.selectedFiles.length <= 1 && isFolder() && !fil.placeIsSelected,
     },
     {
       label: 'Remove From Places',
-      icon: <Archive />,
+      icon: <StackMinus />,
       onClick: () => sidebar.removeItem(fil.lastPathSegment(fil.selectedFiles[0])),
       onMouseEnter: () => cont.setShowDirMenu(false),
       disabled: false,
       visible: fil.placeIsSelected,
+    },
+    {
+      label: 'Delete',
+      icon: <Trash />,
+      onClick: () => pop.setWarningPopup(true),
+      onMouseEnter: () => cont.setShowDirMenu(false),
+      disabled: isDisabledPath(nav.path),
+      visible: !fil.placeIsSelected && fil.selectedFiles.length > 0,
     },
   ])
 
@@ -201,7 +232,6 @@ export function ContextMenu() {
         onContextMenu={() => {
           cont.setShowMenu(false)
           cont.setShowDirMenu(false)
-
         }}
       />
       <div
@@ -219,27 +249,33 @@ export function ContextMenu() {
           {(item) => (
             <>
               <Show when={item.visible}>
-                <Show when={['Move To Trash', 'Delete',].includes(item.label)}>
-                  <div class="h-px w-full bg-(--border-secondary)" />
-                  <div class="h-1" />
+                <Show when={['Move To Trash', 'Delete'].includes(item.label)}>
+                  <div class="mt-1 h-px w-full bg-(--border-secondary)" />
                 </Show>
 
-                <button class={`flex h-7 w-full items-center rounded-sm text-[0.75rem] gap-1 ${
-                  item.disabled ? 'text-(--text-muted)' : 'hover:bg-(--bg-card-hover)'
-                  }`}
+                <button
+                  class="flex h-7 w-full items-center gap-1 rounded-sm text-[0.75rem]"
+                  classList={{
+                    'text-(--text-muted)': item.disabled,
+                    'hover:bg-(--bg-card-hover)': !item.disabled && item.label !== 'Delete',
+                    'mt-1': item.label === 'Move To Trash' || item.label === 'Delete',
+                    'mb-1': item.label === 'Move To Trash',
+                    'hover:bg-(--accent-danger)': item.label === 'Delete',
+                  }}
                   onClick={() => {
                     fil.setPlaceIsSelected(false)
                     item.onClick?.()
                   }}
-                  onMouseEnter={() => {if (!item.disabled) item.onMouseEnter?.()}}
+                  onMouseEnter={() => {
+                    if (!item.disabled) item.onMouseEnter?.()
+                  }}
                   disabled={item.disabled}
                 >
                   <div class="pl-2.5"> {item.icon} </div> {item.label}
                 </button>
 
-                <Show when={['Move To Trash', 'Delete'].includes(item.label)}>
-                  <div class="h-1" />
-                  <div class="h-px w-full bg-(--border-secondary)" />
+                <Show when={['Move To Trash'].includes(item.label)}>
+                  <div class="mb-1 h-px w-full bg-(--border-secondary)" />
                 </Show>
               </Show>
             </>

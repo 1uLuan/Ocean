@@ -8,25 +8,84 @@ interface SmoothScrollOptions {
   lock?: () => boolean
 }
 
+export interface SmoothScrollControls {
+  // Soma deltas ao alvo de scroll e deixa a animação existente interpolar até lá.
+  // Usado, por exemplo, pelo auto-scroll do drag-select em MainContent.
+  scrollBy: (deltaY: number, deltaX?: number) => void
+}
+
 export function useSmoothScroll(
   getElement: () => HTMLElement | undefined,
   options: SmoothScrollOptions = {}
-) {
+): SmoothScrollControls {
   const { speed = 1, smoothness = 0.1, enabled = true, horizontal = true, lock } = options
 
-  onMount(() => {
-    if (!enabled) return
+  // ✅ movidos para fora do onMount para que scrollBy() (chamado de fora,
+  // ex: durante um drag) possa acessar/alterar o mesmo estado de animação.
+  let targetScrollTop = 0
+  let currentScrollTop = 0
+  let targetScrollLeft = 0
+  let currentScrollLeft = 0
+  let animationFrameId: number | null = null
+  let isAnimating = false
+  let isWheelScrolling = false
 
+  const runAnimation = (element: HTMLElement) => {
+    currentScrollTop += (targetScrollTop - currentScrollTop) * smoothness
+    element.scrollTop = currentScrollTop
+
+    currentScrollLeft += (targetScrollLeft - currentScrollLeft) * smoothness
+    element.scrollLeft = currentScrollLeft
+
+    const hasVerticalDiff = Math.abs(targetScrollTop - currentScrollTop) > 0.5
+    const hasHorizontalDiff = Math.abs(targetScrollLeft - currentScrollLeft) > 0.5
+
+    if (hasVerticalDiff || hasHorizontalDiff) {
+      animationFrameId = requestAnimationFrame(() => runAnimation(element))
+    } else {
+      isAnimating = false
+      isWheelScrolling = false // ✅ libera o handleScroll novamente
+      currentScrollTop = targetScrollTop
+      currentScrollLeft = targetScrollLeft
+    }
+  }
+
+  const ensureAnimating = (element: HTMLElement) => {
+    if (!isAnimating) {
+      isAnimating = true
+      runAnimation(element)
+    }
+  }
+
+  // API pública: rolagem programática usando a mesma interpolação suave.
+  // Não depende de `enabled` (o wheel pode estar desligado e o scrollBy
+  // continuar funcionando, ex: auto-scroll de drag-select).
+  const scrollBy = (deltaY: number, deltaX = 0) => {
     const element = getElement()
     if (!element) return
 
-    let targetScrollTop = element.scrollTop
-    let currentScrollTop = element.scrollTop
-    let targetScrollLeft = element.scrollLeft
-    let currentScrollLeft = element.scrollLeft
-    let animationFrameId: number | null = null
-    let isAnimating = false
-    let isWheelScrolling = false
+    isWheelScrolling = true
+    targetScrollTop = Math.max(
+      0,
+      Math.min(targetScrollTop + deltaY, element.scrollHeight - element.clientHeight)
+    )
+    targetScrollLeft = Math.max(
+      0,
+      Math.min(targetScrollLeft + deltaX, element.scrollWidth - element.clientWidth)
+    )
+    ensureAnimating(element)
+  }
+
+  onMount(() => {
+    const element = getElement()
+    if (!element) return
+
+    targetScrollTop = element.scrollTop
+    currentScrollTop = element.scrollTop
+    targetScrollLeft = element.scrollLeft
+    currentScrollLeft = element.scrollLeft
+
+    if (!enabled) return
 
     // ✅ fix: sincroniza targets quando o usuário usa a scrollbar
     const handleScroll = () => {
@@ -60,30 +119,7 @@ export function useSmoothScroll(
         )
       }
 
-      if (!isAnimating) {
-        isAnimating = true
-        smoothScroll()
-      }
-    }
-
-    const smoothScroll = () => {
-      currentScrollTop += (targetScrollTop - currentScrollTop) * smoothness
-      element.scrollTop = currentScrollTop
-
-      currentScrollLeft += (targetScrollLeft - currentScrollLeft) * smoothness
-      element.scrollLeft = currentScrollLeft
-
-      const hasVerticalDiff = Math.abs(targetScrollTop - currentScrollTop) > 0.5
-      const hasHorizontalDiff = Math.abs(targetScrollLeft - currentScrollLeft) > 0.5
-
-      if (hasVerticalDiff || hasHorizontalDiff) {
-        animationFrameId = requestAnimationFrame(smoothScroll)
-      } else {
-        isAnimating = false
-        isWheelScrolling = false // ✅ libera o handleScroll novamente
-        currentScrollTop = targetScrollTop
-        currentScrollLeft = targetScrollLeft
-      }
+      ensureAnimating(element)
     }
 
     element.addEventListener('wheel', handleWheel, { passive: false })
@@ -95,6 +131,8 @@ export function useSmoothScroll(
       if (animationFrameId !== null) cancelAnimationFrame(animationFrameId)
     })
   })
+
+  return { scrollBy }
 }
 
 export default useSmoothScroll

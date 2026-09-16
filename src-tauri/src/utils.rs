@@ -71,8 +71,8 @@ pub async fn open_terminal(app: tauri::AppHandle, path: String) -> Result<(), St
     #[cfg(target_os = "linux")]
     {
         app.shell()
-            .command("kitty")
-            .args(["--working-directory", &path])
+            .command("ghostty")
+            .args([format!("--working-directory={}", path)])
             .spawn()
             .map_err(|e| e.to_string())?;
     }
