@@ -70,8 +70,8 @@ export function CopyPopup(props: Props) {
     >
       <span class="truncate text-center text-[0.85rem]">{'Copiando ' + file()}</span>
       <Show when={panelIsOpen()}>
+        {/*Overlay*/}
         <div
-          data-="Overlay"
           class="fixed inset-0 z-40 h-screen w-screen bg-transparent"
           onMouseDown={() => {
             setPanel(false)

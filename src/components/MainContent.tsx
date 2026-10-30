@@ -335,8 +335,8 @@ export function MainContent() {
     if (!el || !headerRef) return
 
     scrollControls = useSmoothScroll(() => el, {
-      speed: 1,
-      smoothness: 0.1,
+      speed: 0.8,
+      smoothness: 0.3,
       lock: altPressed,
     })
 

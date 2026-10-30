@@ -1,4 +1,4 @@
-import { For, type JSX, createMemo, onMount, Show } from 'solid-js'
+import { For, type JSX, createMemo, onMount, Show, createSignal } from 'solid-js'
 import { useNavigationStore } from '@/stores/NavigationStore'
 import { useFileStore } from '@/stores/FileStore'
 //icons
@@ -11,9 +11,8 @@ import Ssd from '~icons/solar/ssd-round-bold-duotone'
 import { useDiskStore } from '@/stores/DiskStore'
 import { useSidebarItemsStore } from '@/stores/SidebarItemsStore'
 import { useContextMenuStore } from '@/stores/ContextMenuStore'
-import { CompressPopup } from './CompressPopup'
-import { CopyPopup } from './CopyPopup'
-import { usePopupControl } from '@/stores/PopupControl'
+import { useOperationStore } from '@/stores/OperationStore'
+import { OperationPopup } from './OperationPopup'
 
 type IconComponent = (...args: any[]) => JSX.Element
 
@@ -23,7 +22,7 @@ export function SideBar() {
   const disk = useDiskStore()
   const sidebar = useSidebarItemsStore()
   const cont = useContextMenuStore()
-  const pop = usePopupControl()
+  const ops = useOperationStore()
   const local_icons = createMemo(
     () =>
       ({
@@ -130,22 +129,7 @@ export function SideBar() {
           )
         }}
       </For>
-      <div class="flex h-full w-full flex-col justify-end p-1.5">
-        <For each={pop.compressions}>
-          {(id) => (
-            <>
-              <CompressPopup opId={id} onCancel={pop.cancelCompress} />
-            </>
-          )}
-        </For>
-        <For each={pop.copies}>
-          {(id) => (
-            <>
-              <CopyPopup copyId={id} onCancel={pop.cancelCopy} />
-            </>
-          )}
-        </For>
-      </div>
+      <For each={Object.values(ops.ops)}>{(op) => <OperationPopup op={op} />}</For>
     </div>
   )
 }

@@ -1,30 +1,30 @@
 //icons
-import folderIcon from '/usr/share/icons/Colloid/places/scalable/folder.svg'
-import zipIcon from '/usr/share/icons/Colloid/mimetypes/scalable/zip.svg'
+import folderIcon from '/home/luan/.local/share/icons/Colloid/places/scalable/folder.svg'
+import zipIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/zip.svg'
 
 //text
-import textIcon from '/usr/share/icons/Colloid/mimetypes/scalable/txt.svg'
-import yamlIcon from '/usr/share/icons/Colloid/mimetypes/scalable/application-x-yaml.svg'
-import mdIcon from '/usr/share/icons/Colloid/mimetypes/scalable/text-markdown.svg'
-import jsonIcon from '/usr/share/icons/Colloid/mimetypes/scalable/application-json.svg'
-import htmlIcon from '/usr/share/icons/Colloid/mimetypes/scalable/html.svg'
-import jsIcon from '/usr/share/icons/Colloid/mimetypes/scalable/javascript.svg'
-import tsIcon from '/usr/share/icons/Colloid/mimetypes/scalable/text-x-typescript.svg'
-import cssIcon from '/usr/share/icons/Colloid/mimetypes/scalable/text-css.svg'
-import rustIcon from '/usr/share/icons/Colloid/mimetypes/scalable/text-rust.svg'
-import tomlIcon from '/usr/share/icons/Colloid/mimetypes/scalable/text-plain.svg'
-import pyIcon from '/usr/share/icons/Colloid/mimetypes/scalable/text-x-python.svg'
-import dllIcon from '/usr/share/icons/Colloid/mimetypes/scalable/gnome-exe-thumbnailer-generic-x.svg'
+import textIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/txt.svg'
+import yamlIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/application-x-yaml.svg'
+import mdIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/text-markdown.svg'
+import jsonIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/application-json.svg'
+import htmlIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/html.svg'
+import jsIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/javascript.svg'
+import tsIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/text-x-typescript.svg'
+import cssIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/text-css.svg'
+import rustIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/text-rust.svg'
+import tomlIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/text-plain.svg'
+import pyIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/text-x-python.svg'
+import dllIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/gnome-exe-thumbnailer-generic-x.svg'
 
-import imageIcon from '/usr/share/icons/Colloid/mimetypes/scalable/image-x-ico.svg'
-import audioIcon from '/usr/share/icons/Colloid/mimetypes/scalable/audio-x-generic.svg'
-import videoIcon from '/usr/share/icons/Colloid/mimetypes/scalable/video-x-generic.svg'
+import imageIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/image-x-ico.svg'
+import audioIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/audio-x-generic.svg'
+import videoIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/video-x-generic.svg'
 
 //execs
-import execIcon from '/usr/share/icons/Colloid/mimetypes/scalable/exec.svg'
-import shIcon from '/usr/share/icons/Colloid/mimetypes/scalable/shellscript.svg'
+import execIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/exec.svg'
+import shIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/shellscript.svg'
 
-import unknownIcon from '/usr/share/icons/Colloid/mimetypes/scalable/unknown.svg'
+import unknownIcon from '/home/luan/.local/share/icons/Colloid/mimetypes/scalable/unknown.svg'
 
 export const icons: Record<string, string> = {
 

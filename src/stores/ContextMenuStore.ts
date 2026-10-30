@@ -2,11 +2,11 @@ import { createStore } from 'solid-js/store'
 import { invoke } from '@tauri-apps/api/core'
 import { useNavigationStore } from '@/stores/NavigationStore'
 import { useFileStore } from '@/stores/FileStore'
-import { usePopupControl } from '@/stores/PopupControl'
+import { useOperationStore } from './OperationStore'
 
 const nav = useNavigationStore()
 const fil = useFileStore()
-const pop = usePopupControl()
+const ops = useOperationStore()
 
 type MenuPosition = { x: number; y: number } | null
 
@@ -122,41 +122,32 @@ async function makeFile() {
   }
 }
 
-async function pasteDir() {
-  const id = crypto.randomUUID()
-  pop.startCopy(id)
-  try {
-    await invoke('copy_items_to', {
-      dirPaths: fil.copySelected,
-      targetPath: fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path,
-      copyId: id,
-    })
-  } catch (error) {
-    console.log(error)
-  }
-  pop.removeCopy(id)
-  fil.setReload(!fil.reload)
-  //fil.resetSelected()
-  //fil.setCopySelected([])
+
+//========OPERAÇOES========
+const dest = () => (fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path)
+
+const pasteDir = () =>
+  ops.runOperation('copy', 'copy_items_to', { dirPaths: fil.copySelected, targetPath: dest() })
+
+const moveDir = () =>
+  ops.runOperation('move', 'move_items_to', { dirPaths: fil.cutSelected, targetPath: dest() })
+
+async function compressToZip() {
+  await ops.runOperation('compress', 'compress_to_zip', {
+    filePaths: fil.selectedFiles,
+    outputPath: nav.workspaces[nav.actualWorkspace] + '/' + state.text + '.zip',
+  })
+  fil.resetSelected()
 }
 
-async function moveDir() {
-  try {
-    document.body.style.cursor = 'wait'
-    await invoke('move_items_to', {
-      dirPaths: fil.cutSelected,
-      targetPath: fil.selectedFiles.length === 1 ? fil.selectedFiles[0] : nav.path,
-    })
-  } catch (error) {
-    console.log(error)
-  } finally {
-    document.body.style.cursor = 'default'
-  }
-  fil.setReload(!fil.reload)
-  //fil.resetSelected()
-  //fil.setCopySelected([])
+async function extractZip() {
+  await ops.runOperation('extract', 'extract_zip', {
+    zipPaths: fil.selectedFiles,
+    outputPath: nav.workspaces[nav.actualWorkspace],
+  })
+  fil.resetSelected()
 }
-
+//====================================
 async function moveToTrash() {
   try {
     await invoke('move_to_trash', { dirPaths: fil.selectedFiles })
@@ -175,43 +166,6 @@ async function deleteItems() {
   } catch (err) {
     console.log(err)
   }
-}
-
-async function compressToZip() {
-  const id = crypto.randomUUID()
-  pop.startCompress(id)
-
-  try {
-    await invoke('compress_to_zip', {
-      filePaths: fil.selectedFiles,
-      outputPath: nav.workspaces[nav.actualWorkspace] + '/' + state.text + '.zip',
-      opId: id,
-    })
-  } catch (error) {
-    console.log(error)
-  }
-  pop.removeCompress(id)
-  fil.setReload(!fil.reload)
-  fil.resetSelected()
-}
-
-async function extractZip() {
-  const id = crypto.randomUUID()
-  pop.startCompress(id)
-
-  try {
-    await invoke('extract_zip', {
-      zipPaths: fil.selectedFiles,
-      outputPath: nav.workspaces[nav.actualWorkspace],
-      opId: id,
-    })
-    fil.setReload(!fil.reload)
-  } catch (error) {
-    console.log(error)
-  }
-  pop.removeCompress(id)
-  fil.setReload(!fil.reload)
-  fil.resetSelected()
 }
 
 export const useContextMenuStore = () => ({

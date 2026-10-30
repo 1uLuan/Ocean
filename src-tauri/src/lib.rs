@@ -4,6 +4,7 @@ mod management;
 mod navigation;
 mod udisks;
 mod utils;
+mod operations;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,14 +17,14 @@ pub fn run() {
             navigation::back_dir,
             management::make_dir,
             management::make_file,
-            management::copy_items_to,
-            management::move_items_to,
-            management::cancel_func,
+            operations::copy_items_to,
+            operations::move_items_to,
+            operations::cancel_op,
             management::rename_dir,
             management::move_to_trash,
             management::delete,
-            management::compress_to_zip,
-            management::extract_zip,
+            operations::compress_to_zip,
+            operations::extract_zip,
             configuration::load_config,
             configuration::save_config,
             utils::get_home,

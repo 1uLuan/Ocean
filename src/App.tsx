@@ -17,6 +17,7 @@ import { useConfigStore } from '@/stores/ConfigStore'
 import { useContextMenuStore } from './stores/ContextMenuStore'
 import { usePopupControl } from './stores/PopupControl'
 import { useNavigationStore } from './stores/NavigationStore'
+import { useOperationStore } from './stores/OperationStore'
 //hooks
 import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts'
 import { invoke } from '@tauri-apps/api/core'
@@ -58,6 +59,7 @@ function FileExplorer() {
     invoke<string>('get_home').then((homePath) => {
       nav.setHome(homePath)
       nav.goPath(homePath)
+      useOperationStore().initOperations()
     })
   })
 
